@@ -1,4 +1,3 @@
-import type React from "react"
 import type { Command } from "./parser"
 
 interface RobotState {
@@ -9,9 +8,9 @@ interface RobotState {
 
 export function executeCommands(
   commands: Command[],
-  setRobotState: React.Dispatch<React.SetStateAction<RobotState>>,
-  setMessage: React.Dispatch<React.SetStateAction<string>>,
-  setCurrentLine: React.Dispatch<React.SetStateAction<number>>,
+  setRobotState: (updater: (prev: RobotState) => RobotState) => void,
+  setMessage: (message: string) => void,
+  setCurrentLine: (line: number) => void,
   onComplete: () => void,
 ): () => void {
   let stopped = false

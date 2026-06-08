@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useRef, useCallback } from "react"
 import { Command, parseCode } from "@/lib/parser"
+import { executeCommands } from "@/lib/executor"
 
 export interface RobotState {
   x: number
@@ -62,9 +63,39 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
     setCommands("")
   }, [resetRobot])
 
-  const runCommands = () => {
-    // Placeholder
-  }
+  const runCommands = useCallback(() => {
+    stopExecution()
+
+    const parsed = parseCode(commands)
+    if (parsed.errors.length > 0) {
+      setMessage(`Error: ${parsed.errors[0]}`)
+      return
+    }
+
+    setIsExecuting(true)
+
+    const stop = executeCommands(
+      parsed.commands,
+      (updater) => {
+        setTargetState((prev) => {
+          const next = updater(prev)
+          if (next.x !== prev.x || next.y !== prev.y) {
+            setTrail((t) => [...t, { x: next.x, y: next.y }])
+          }
+          return next
+        })
+      },
+      setMessage,
+      setCurrentLine,
+      () => {
+        setIsExecuting(false)
+        setMessage("Mission complete!")
+        executionRef.current = null
+      },
+    )
+
+    executionRef.current = stop
+  }, [commands, stopExecution])
 
   return (
     <RobotContext.Provider value={{
