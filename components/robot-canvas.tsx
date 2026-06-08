@@ -12,6 +12,87 @@ interface RobotState {
   rotation: number
 }
 
+const drawBackground = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+  const gradient = ctx.createLinearGradient(0, 0, 0, height)
+  gradient.addColorStop(0, "#1a1f35")
+  gradient.addColorStop(1, "#2d3748")
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, width, height)
+
+  ctx.strokeStyle = "#374151"
+  ctx.lineWidth = 0.5
+  for (let i = 0; i <= width; i += 10) {
+    ctx.beginPath()
+    ctx.moveTo(i, 0)
+    ctx.lineTo(i, height)
+    ctx.stroke()
+  }
+  for (let i = 0; i <= height; i += 10) {
+    ctx.beginPath()
+    ctx.moveTo(0, i)
+    ctx.lineTo(width, i)
+    ctx.stroke()
+  }
+
+  ctx.strokeStyle = "#4b5563"
+  ctx.lineWidth = 1.5
+  for (let i = 0; i <= width; i += 50) {
+    ctx.beginPath()
+    ctx.moveTo(i, 0)
+    ctx.lineTo(i, height)
+    ctx.stroke()
+  }
+  for (let i = 0; i <= height; i += 50) {
+    ctx.beginPath()
+    ctx.moveTo(0, i)
+    ctx.lineTo(width, i)
+    ctx.stroke()
+  }
+
+  // X-axis (horizontal through center)
+  ctx.strokeStyle = "#60a5fa"
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(0, height / 2)
+  ctx.lineTo(width, height / 2)
+  ctx.stroke()
+
+  // Y-axis (vertical through center)
+  ctx.beginPath()
+  ctx.moveTo(width / 2, 0)
+  ctx.lineTo(width / 2, height)
+  ctx.stroke()
+
+  // Draw coordinate markers
+  ctx.fillStyle = "#60a5fa"
+  ctx.font = "bold 12px Inter"
+  ctx.textAlign = "center"
+  ctx.textBaseline = "middle"
+
+  // X-axis markers (every 5 steps = 50px)
+  for (let i = -25; i <= 25; i += 5) {
+    if (i === 0) continue
+    const x = width / 2 + i * 10
+    ctx.fillRect(x - 1, height / 2 - 5, 2, 10)
+    ctx.fillText(i.toString(), x, height / 2 + 15)
+  }
+
+  // Y-axis markers (every 5 steps = 50px)
+  ctx.textAlign = "right"
+  for (let i = -25; i <= 25; i += 5) {
+    if (i === 0) continue
+    const y = height / 2 - i * 10
+    ctx.fillRect(width / 2 - 5, y - 1, 10, 2)
+    ctx.fillText(i.toString(), width / 2 - 10, y)
+  }
+
+  // Origin marker
+  ctx.fillStyle = "#fbbf24"
+  ctx.font = "bold 14px Inter"
+  ctx.textAlign = "left"
+  ctx.fillText("(0,0)", width / 2 + 5, height / 2 - 5)
+}
+
 export interface RobotCanvasRef {
   getCanvas: () => HTMLCanvasElement | null
 }
@@ -27,6 +108,7 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
     } = useRobot()
 
     const canvasRef = useRef<HTMLCanvasElement>(null)
+    const bgCanvasRef = useRef<HTMLCanvasElement | null>(null)
     const [robotState, setRobotState] = useState<RobotState>({
       x: 250,
       y: 250,
@@ -38,6 +120,20 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
     useImperativeHandle(ref, () => ({
       getCanvas: () => canvasRef.current,
     }))
+
+    // Initialize background canvas once
+    useEffect(() => {
+      if (!bgCanvasRef.current) {
+        const bgCanvas = document.createElement("canvas")
+        bgCanvas.width = 500
+        bgCanvas.height = 500
+        const bgCtx = bgCanvas.getContext("2d")
+        if (bgCtx) {
+          drawBackground(bgCtx, 500, 500)
+        }
+        bgCanvasRef.current = bgCanvas
+      }
+    }, [])
 
     // Snap to target state when not executing (handles reset/clear)
     useEffect(() => {
@@ -105,84 +201,7 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
       const ctx = canvas.getContext("2d")
       if (!ctx) return
 
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
-      gradient.addColorStop(0, "#1a1f35")
-      gradient.addColorStop(1, "#2d3748")
-      ctx.fillStyle = gradient
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-      ctx.strokeStyle = "#374151"
-      ctx.lineWidth = 0.5
-      for (let i = 0; i <= canvas.width; i += 10) {
-        ctx.beginPath()
-        ctx.moveTo(i, 0)
-        ctx.lineTo(i, canvas.height)
-        ctx.stroke()
-      }
-      for (let i = 0; i <= canvas.height; i += 10) {
-        ctx.beginPath()
-        ctx.moveTo(0, i)
-        ctx.lineTo(canvas.width, i)
-        ctx.stroke()
-      }
-
-      ctx.strokeStyle = "#4b5563"
-      ctx.lineWidth = 1.5
-      for (let i = 0; i <= canvas.width; i += 50) {
-        ctx.beginPath()
-        ctx.moveTo(i, 0)
-        ctx.lineTo(i, canvas.height)
-        ctx.stroke()
-      }
-      for (let i = 0; i <= canvas.height; i += 50) {
-        ctx.beginPath()
-        ctx.moveTo(0, i)
-        ctx.lineTo(canvas.width, i)
-        ctx.stroke()
-      }
-
-      // X-axis (horizontal through center)
-      ctx.strokeStyle = "#60a5fa"
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.moveTo(0, 250)
-      ctx.lineTo(500, 250)
-      ctx.stroke()
-
-      // Y-axis (vertical through center)
-      ctx.beginPath()
-      ctx.moveTo(250, 0)
-      ctx.lineTo(250, 500)
-      ctx.stroke()
-
-      // Draw coordinate markers
-      ctx.fillStyle = "#60a5fa"
-      ctx.font = "bold 12px Inter"
-      ctx.textAlign = "center"
-      ctx.textBaseline = "middle"
-
-      // X-axis markers (every 5 steps = 50px)
-      for (let i = -25; i <= 25; i += 5) {
-        if (i === 0) continue
-        const x = 250 + i * 10
-        ctx.fillRect(x - 1, 245, 2, 10)
-        ctx.fillText(i.toString(), x, 265)
-      }
-
-      // Y-axis markers (every 5 steps = 50px)
-      ctx.textAlign = "right"
-      for (let i = -25; i <= 25; i += 5) {
-        if (i === 0) continue
-        const y = 250 - i * 10
-        ctx.fillRect(245, y - 1, 10, 2)
-        ctx.fillText(i.toString(), 240, y)
-      }
-
-      // Origin marker
-      ctx.fillStyle = "#fbbf24"
-      ctx.font = "bold 14px Inter"
-      ctx.textAlign = "left"
-      ctx.fillText("(0,0)", 255, 245)
+      drawBackground(ctx, canvas.width, canvas.height)
 
       if (trail.length > 1) {
         for (let i = 1; i < trail.length; i++) {
