@@ -5,30 +5,27 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Play, Square, RotateCcw, Save, Flag } from "lucide-react"
 import { useEffect, useRef } from "react"
+import { useRobot } from "@/lib/contexts/robot-context"
 
 interface CodeEditorProps {
-  code: string
-  onCodeChange: (code: string) => void
-  onRun: () => void
-  onStop: () => void
-  onReset: () => void
-  onClear: () => void
   onSave: () => void
   onEndGame: () => void
-  isExecuting: boolean
 }
 
 export function CodeEditor({
-  code,
-  onCodeChange,
-  onRun,
-  onStop,
-  onReset,
-  onClear,
   onSave,
   onEndGame,
-  isExecuting,
 }: CodeEditorProps) {
+  const {
+    commands: code,
+    isExecuting,
+    updateCommands: onCodeChange,
+    runCommands: onRun,
+    stopExecution: onStop,
+    resetRobot: onReset,
+    clearAll: onClear,
+  } = useRobot()
+
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const lineNumbersRef = useRef<HTMLDivElement>(null)
 
