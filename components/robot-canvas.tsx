@@ -93,6 +93,150 @@ const drawBackground = (ctx: CanvasRenderingContext2D, width: number, height: nu
   ctx.fillText("(0,0)", width / 2 + 5, height / 2 - 5)
 }
 
+const drawTrail = (ctx: CanvasRenderingContext2D, trail: { x: number; y: number }[]) => {
+  if (trail.length <= 1) return
+
+  for (let i = 1; i < trail.length; i++) {
+    const prev = trail[i - 1]
+    const curr = trail[i]
+    const alpha = Math.max(0.3, (i / trail.length) * 0.8)
+
+    ctx.strokeStyle = `rgba(139, 92, 246, ${alpha})`
+    ctx.lineWidth = 5
+    ctx.lineCap = "round"
+    ctx.lineJoin = "round"
+
+    ctx.beginPath()
+    ctx.moveTo(prev.x, prev.y)
+    ctx.lineTo(curr.x, curr.y)
+    ctx.stroke()
+
+    ctx.fillStyle = `rgba(167, 139, 250, ${alpha})`
+    ctx.shadowColor = "rgba(139, 92, 246, 0.8)"
+    ctx.shadowBlur = 8
+    ctx.beginPath()
+    ctx.arc(curr.x, curr.y, 4, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.shadowBlur = 0
+  }
+}
+
+const drawRobot = (ctx: CanvasRenderingContext2D, robotState: RobotState) => {
+  ctx.save()
+  ctx.translate(robotState.x, robotState.y)
+  ctx.rotate((robotState.rotation * Math.PI) / 180)
+
+  // Robot shadow
+  ctx.fillStyle = "rgba(0, 0, 0, 0.3)"
+  ctx.beginPath()
+  ctx.ellipse(0, 28, 24, 8, 0, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Body
+  const bodyGradient = ctx.createLinearGradient(-25, -25, 25, 25)
+  bodyGradient.addColorStop(0, "#60a5fa")
+  bodyGradient.addColorStop(0.5, "#3b82f6")
+  bodyGradient.addColorStop(1, "#2563eb")
+  ctx.fillStyle = bodyGradient
+  ctx.beginPath()
+  ctx.roundRect(-25, -25, 50, 50, 10)
+  ctx.fill()
+
+  // Chest panel
+  ctx.fillStyle = "rgba(255, 255, 255, 0.2)"
+  ctx.beginPath()
+  ctx.roundRect(-22, -22, 44, 25, 8)
+  ctx.fill()
+
+  // Head
+  const headGradient = ctx.createRadialGradient(-5, -10, 5, 0, 0, 18)
+  headGradient.addColorStop(0, "#93c5fd")
+  headGradient.addColorStop(1, "#60a5fa")
+  ctx.fillStyle = headGradient
+  ctx.beginPath()
+  ctx.arc(0, -5, 18, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Eyes
+  ctx.fillStyle = "#ffffff"
+  ctx.shadowColor = "rgba(0, 0, 0, 0.3)"
+  ctx.shadowBlur = 3
+  ctx.shadowOffsetX = 1
+  ctx.shadowOffsetY = 1
+  ctx.beginPath()
+  ctx.arc(-9, -8, 5, 0, Math.PI * 2)
+  ctx.arc(9, -8, 5, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.shadowBlur = 0
+  ctx.shadowOffsetX = 0
+  ctx.shadowOffsetY = 0
+
+  ctx.fillStyle = "#1e293b"
+  ctx.beginPath()
+  ctx.arc(-9, -8, 3, 0, Math.PI * 2)
+  ctx.arc(9, -8, 3, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.fillStyle = "#ffffff"
+  ctx.beginPath()
+  ctx.arc(-10, -9, 1.5, 0, Math.PI * 2)
+  ctx.arc(8, -9, 1.5, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Mouth
+  ctx.strokeStyle = "#1e293b"
+  ctx.lineWidth = 2.5
+  ctx.lineCap = "round"
+  ctx.beginPath()
+  ctx.arc(0, 3, 12, 0.2, Math.PI - 0.2)
+  ctx.stroke()
+
+  // Antenna
+  ctx.strokeStyle = "#64748b"
+  ctx.lineWidth = 3
+  ctx.beginPath()
+  ctx.moveTo(0, -23)
+  ctx.lineTo(0, -32)
+  ctx.stroke()
+
+  const antennaBallGradient = ctx.createRadialGradient(-1, -34, 1, 0, -35, 5)
+  antennaBallGradient.addColorStop(0, "#fbbf24")
+  antennaBallGradient.addColorStop(1, "#f59e0b")
+  ctx.fillStyle = antennaBallGradient
+  ctx.beginPath()
+  ctx.arc(0, -35, 5, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Direction arrow
+  const arrowGradient = ctx.createLinearGradient(0, -40, 0, -25)
+  arrowGradient.addColorStop(0, "#fde047")
+  arrowGradient.addColorStop(1, "#fbbf24")
+  ctx.fillStyle = arrowGradient
+  ctx.beginPath()
+  ctx.moveTo(0, -45)
+  ctx.lineTo(-7, -30)
+  ctx.lineTo(7, -30)
+  ctx.closePath()
+  ctx.fill()
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0.2)"
+  ctx.beginPath()
+  ctx.moveTo(0, -43)
+  ctx.lineTo(-6, -30)
+  ctx.lineTo(6, -30)
+  ctx.closePath()
+  ctx.fill()
+
+  // Arms
+  ctx.fillStyle = "#3b82f6"
+  ctx.beginPath()
+  ctx.roundRect(-30, -5, 5, 20, 2)
+  ctx.roundRect(25, -5, 5, 20, 2)
+  ctx.fill()
+
+  ctx.restore()
+}
+
 export interface RobotCanvasRef {
   getCanvas: () => HTMLCanvasElement | null
 }
@@ -207,10 +351,8 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
 
     useEffect(() => {
       const canvas = canvasRef.current
-      if (!canvas) return
-
-      const ctx = canvas.getContext("2d")
-      if (!ctx) return
+      const ctx = canvas?.getContext("2d")
+      if (!canvas || !ctx) return
 
       if (bgCanvasRef.current) {
         ctx.drawImage(bgCanvasRef.current, 0, 0)
@@ -218,136 +360,8 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
         drawBackground(ctx, canvas.width, canvas.height)
       }
 
-      if (trail.length > 1) {
-        for (let i = 1; i < trail.length; i++) {
-          const prev = trail[i - 1]
-          const curr = trail[i]
-          const alpha = Math.max(0.3, (i / trail.length) * 0.8)
-
-          ctx.strokeStyle = `rgba(139, 92, 246, ${alpha})`
-          ctx.lineWidth = 5
-          ctx.lineCap = "round"
-          ctx.lineJoin = "round"
-
-          ctx.beginPath()
-          ctx.moveTo(prev.x, prev.y)
-          ctx.lineTo(curr.x, curr.y)
-          ctx.stroke()
-
-          ctx.fillStyle = `rgba(167, 139, 250, ${alpha})`
-          ctx.shadowColor = "rgba(139, 92, 246, 0.8)"
-          ctx.shadowBlur = 8
-          ctx.beginPath()
-          ctx.arc(curr.x, curr.y, 4, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.shadowBlur = 0
-        }
-      }
-
-      ctx.save()
-      ctx.translate(robotState.x, robotState.y)
-      ctx.rotate((robotState.rotation * Math.PI) / 180)
-
-      ctx.fillStyle = "rgba(0, 0, 0, 0.3)"
-      ctx.beginPath()
-      ctx.ellipse(0, 28, 24, 8, 0, 0, Math.PI * 2)
-      ctx.fill()
-
-      const bodyGradient = ctx.createLinearGradient(-25, -25, 25, 25)
-      bodyGradient.addColorStop(0, "#60a5fa")
-      bodyGradient.addColorStop(0.5, "#3b82f6")
-      bodyGradient.addColorStop(1, "#2563eb")
-      ctx.fillStyle = bodyGradient
-      ctx.beginPath()
-      ctx.roundRect(-25, -25, 50, 50, 10)
-      ctx.fill()
-
-      ctx.fillStyle = "rgba(255, 255, 255, 0.2)"
-      ctx.beginPath()
-      ctx.roundRect(-22, -22, 44, 25, 8)
-      ctx.fill()
-
-      const headGradient = ctx.createRadialGradient(-5, -10, 5, 0, 0, 18)
-      headGradient.addColorStop(0, "#93c5fd")
-      headGradient.addColorStop(1, "#60a5fa")
-      ctx.fillStyle = headGradient
-      ctx.beginPath()
-      ctx.arc(0, -5, 18, 0, Math.PI * 2)
-      ctx.fill()
-
-      ctx.fillStyle = "#ffffff"
-      ctx.shadowColor = "rgba(0, 0, 0, 0.3)"
-      ctx.shadowBlur = 3
-      ctx.shadowOffsetX = 1
-      ctx.shadowOffsetY = 1
-      ctx.beginPath()
-      ctx.arc(-9, -8, 5, 0, Math.PI * 2)
-      ctx.arc(9, -8, 5, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.shadowBlur = 0
-      ctx.shadowOffsetX = 0
-      ctx.shadowOffsetY = 0
-
-      ctx.fillStyle = "#1e293b"
-      ctx.beginPath()
-      ctx.arc(-9, -8, 3, 0, Math.PI * 2)
-      ctx.arc(9, -8, 3, 0, Math.PI * 2)
-      ctx.fill()
-
-      ctx.fillStyle = "#ffffff"
-      ctx.beginPath()
-      ctx.arc(-10, -9, 1.5, 0, Math.PI * 2)
-      ctx.arc(8, -9, 1.5, 0, Math.PI * 2)
-      ctx.fill()
-
-      ctx.strokeStyle = "#1e293b"
-      ctx.lineWidth = 2.5
-      ctx.lineCap = "round"
-      ctx.beginPath()
-      ctx.arc(0, 3, 12, 0.2, Math.PI - 0.2)
-      ctx.stroke()
-
-      ctx.strokeStyle = "#64748b"
-      ctx.lineWidth = 3
-      ctx.beginPath()
-      ctx.moveTo(0, -23)
-      ctx.lineTo(0, -32)
-      ctx.stroke()
-
-      const antennaBallGradient = ctx.createRadialGradient(-1, -34, 1, 0, -35, 5)
-      antennaBallGradient.addColorStop(0, "#fbbf24")
-      antennaBallGradient.addColorStop(1, "#f59e0b")
-      ctx.fillStyle = antennaBallGradient
-      ctx.beginPath()
-      ctx.arc(0, -35, 5, 0, Math.PI * 2)
-      ctx.fill()
-
-      const arrowGradient = ctx.createLinearGradient(0, -40, 0, -25)
-      arrowGradient.addColorStop(0, "#fde047")
-      arrowGradient.addColorStop(1, "#fbbf24")
-      ctx.fillStyle = arrowGradient
-      ctx.beginPath()
-      ctx.moveTo(0, -45)
-      ctx.lineTo(-7, -30)
-      ctx.lineTo(7, -30)
-      ctx.closePath()
-      ctx.fill()
-
-      ctx.fillStyle = "rgba(0, 0, 0, 0.2)"
-      ctx.beginPath()
-      ctx.moveTo(0, -43)
-      ctx.lineTo(-6, -30)
-      ctx.lineTo(6, -30)
-      ctx.closePath()
-      ctx.fill()
-
-      ctx.fillStyle = "#3b82f6"
-      ctx.beginPath()
-      ctx.roundRect(-30, -5, 5, 20, 2)
-      ctx.roundRect(25, -5, 5, 20, 2)
-      ctx.fill()
-
-      ctx.restore()
+      drawTrail(ctx, trail)
+      drawRobot(ctx, robotState)
     }, [robotState, trail])
 
     return (
