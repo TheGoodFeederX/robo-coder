@@ -10,46 +10,25 @@ import { saveExecution, getSavedExecutions, clearSavedExecutions } from "@/lib/s
 import { useToast } from "@/hooks/use-toast"
 import type { SavedExecution } from "@/lib/types"
 import { Heart } from "lucide-react"
+import { RobotProvider, useRobot } from "@/lib/contexts/robot-context"
 
 type GameState = "name-input" | "playing" | "summary"
 
-export default function PlaygroundPage() {
+function PlaygroundContent() {
   const [gameState, setGameState] = useState<GameState>("name-input")
   const [playerName, setPlayerName] = useState("")
-  const [commands, setCommands] = useState<string>("")
-  const [isExecuting, setIsExecuting] = useState(false)
-  const [executionTrigger, setExecutionTrigger] = useState(0)
-  const [resetTrigger, setResetTrigger] = useState(0)
-  const [clearTrigger, setClearTrigger] = useState(0)
   const [savedExecutions, setSavedExecutions] = useState<SavedExecution[]>([])
   const robotCanvasRef = useRef<RobotCanvasRef>(null)
   const { toast } = useToast()
+
+  // Use values and functions from RobotContext
+  const { commands, clearAll } = useRobot()
 
   const handleStartGame = (name: string) => {
     setPlayerName(name)
     setGameState("playing")
     setSavedExecutions([])
     clearSavedExecutions()
-  }
-
-  const handleRun = () => {
-    setIsExecuting(true)
-    setExecutionTrigger((prev) => prev + 1)
-  }
-
-  const handleStop = () => {
-    setIsExecuting(false)
-  }
-
-  const handleReset = () => {
-    setIsExecuting(false)
-    setResetTrigger((prev) => prev + 1)
-  }
-
-  const handleClear = () => {
-    setIsExecuting(false)
-    setCommands("")
-    setClearTrigger((prev) => prev + 1)
   }
 
   const handleSave = () => {
@@ -73,7 +52,7 @@ export default function PlaygroundPage() {
       description: "Your code execution has been saved.",
     })
 
-    handleClear()
+    clearAll()
   }
 
   const handleEndGame = () => {
@@ -82,8 +61,7 @@ export default function PlaygroundPage() {
   }
 
   const handleBackToStart = () => {
-    setCommands("")
-    setClearTrigger((prev) => prev + 1)
+    clearAll()
     setSavedExecutions([])
     clearSavedExecutions()
     setGameState("name-input")
@@ -113,25 +91,12 @@ export default function PlaygroundPage() {
           {/* Left Panel - Robot Canvas */}
           <RobotCanvas
             ref={robotCanvasRef}
-            commands={commands}
-            isExecuting={isExecuting}
-            executionTrigger={executionTrigger}
-            resetTrigger={resetTrigger}
-            clearTrigger={clearTrigger}
-            onExecutionComplete={() => setIsExecuting(false)}
           />
 
           {/* Right Panel - Code Editor */}
           <CodeEditor
-            code={commands}
-            onCodeChange={setCommands}
-            onRun={handleRun}
-            onStop={handleStop}
-            onReset={handleReset}
-            onClear={handleClear}
             onSave={handleSave}
             onEndGame={handleEndGame}
-            isExecuting={isExecuting}
           />
         </div>
       </div>
@@ -142,5 +107,13 @@ export default function PlaygroundPage() {
         </p>
       </footer>
     </div>
+  )
+}
+
+export default function PlaygroundPage() {
+  return (
+    <RobotProvider>
+      <PlaygroundContent />
+    </RobotProvider>
   )
 }
