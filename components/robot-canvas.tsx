@@ -114,6 +114,7 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
       y: 250,
       rotation: 0,
     })
+    const robotStateRef = useRef<RobotState>(robotState)
     const animationFrameRef = useRef<number | null>(null)
     const [hoverCoords, setHoverCoords] = useState<{ x: number; y: number } | null>(null)
 
@@ -139,34 +140,44 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
     useEffect(() => {
       if (!isExecuting) {
         setRobotState(targetState)
+        robotStateRef.current = targetState
       }
     }, [isExecuting, targetState])
 
     useEffect(() => {
-      const animate = () => {
-        setRobotState((current) => {
-          const dx = targetState.x - current.x
-          const dy = targetState.y - current.y
-          let dRotation = targetState.rotation - current.rotation
+      const animate = (): boolean => {
+        const current = robotStateRef.current
+        const dx = targetState.x - current.x
+        const dy = targetState.y - current.y
+        let dRotation = targetState.rotation - current.rotation
 
-          while (dRotation > 180) dRotation -= 360
-          while (dRotation < -180) dRotation += 360
+        while (dRotation > 180) dRotation -= 360
+        while (dRotation < -180) dRotation += 360
 
-          if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1 && Math.abs(dRotation) < 0.1) {
-            return targetState
-          }
+        if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1 && Math.abs(dRotation) < 0.1) {
+          setRobotState(targetState)
+          robotStateRef.current = targetState
+          return false
+        }
 
-          return {
-            x: current.x + dx * 0.15,
-            y: current.y + dy * 0.15,
-            rotation: current.rotation + dRotation * 0.15,
-          }
-        })
+        const nextState = {
+          x: current.x + dx * 0.15,
+          y: current.y + dy * 0.15,
+          rotation: current.rotation + dRotation * 0.15,
+        }
 
-        animationFrameRef.current = requestAnimationFrame(animate)
+        setRobotState(nextState)
+        robotStateRef.current = nextState
+        return true
       }
 
-      animationFrameRef.current = requestAnimationFrame(animate)
+      const frame = () => {
+        if (animate()) {
+          animationFrameRef.current = requestAnimationFrame(frame)
+        }
+      }
+
+      animationFrameRef.current = requestAnimationFrame(frame)
 
       return () => {
         if (animationFrameRef.current) {
@@ -201,7 +212,11 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
       const ctx = canvas.getContext("2d")
       if (!ctx) return
 
-      drawBackground(ctx, canvas.width, canvas.height)
+      if (bgCanvasRef.current) {
+        ctx.drawImage(bgCanvasRef.current, 0, 0)
+      } else {
+        drawBackground(ctx, canvas.width, canvas.height)
+      }
 
       if (trail.length > 1) {
         for (let i = 1; i < trail.length; i++) {
