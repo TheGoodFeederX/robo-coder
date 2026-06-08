@@ -11,7 +11,6 @@ export interface RobotState {
 }
 
 interface RobotContextType {
-  robotState: RobotState
   targetState: RobotState
   commands: string
   isExecuting: boolean
@@ -29,7 +28,6 @@ const RobotContext = createContext<RobotContextType | undefined>(undefined)
 
 export function RobotProvider({ children }: { children: React.ReactNode }) {
   const [commands, setCommands] = useState("")
-  const [robotState, setRobotState] = useState<RobotState>({ x: 250, y: 250, rotation: 0 })
   const [targetState, setTargetState] = useState<RobotState>({ x: 250, y: 250, rotation: 0 })
   const [isExecuting, setIsExecuting] = useState(false)
   const [currentLine, setCurrentLine] = useState(-1)
@@ -52,7 +50,6 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
 
   const resetRobot = useCallback(() => {
     stopExecution()
-    setRobotState({ x: 250, y: 250, rotation: 0 })
     setTargetState({ x: 250, y: 250, rotation: 0 })
     setTrail([{ x: 250, y: 250 }])
     setMessage("")
@@ -99,7 +96,7 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <RobotContext.Provider value={{
-      robotState, targetState, commands, isExecuting, currentLine, message, trail,
+      targetState, commands, isExecuting, currentLine, message, trail,
       updateCommands, runCommands, stopExecution, resetRobot, clearAll
     }}>
       {children}
