@@ -4,17 +4,7 @@ import type React from "react"
 
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react"
 import { Card } from "@/components/ui/card"
-import { parseCode } from "@/lib/parser"
-import { executeCommands } from "@/lib/executor"
-
-interface RobotCanvasProps {
-  commands: string
-  isExecuting: boolean
-  executionTrigger: number
-  resetTrigger: number
-  clearTrigger: number
-  onExecutionComplete: () => void
-}
+import { useRobot } from "@/lib/contexts/robot-context"
 
 interface RobotState {
   x: number
@@ -22,61 +12,39 @@ interface RobotState {
   rotation: number
 }
 
-interface TrailPosition {
-  x: number
-  y: number
-}
-
 export interface RobotCanvasRef {
   getCanvas: () => HTMLCanvasElement | null
 }
 
-export const RobotCanvas = forwardRef<RobotCanvasRef, RobotCanvasProps>(
-  ({ commands, isExecuting, executionTrigger, resetTrigger, clearTrigger, onExecutionComplete }, ref) => {
+export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
+  ({}, ref) => {
+    const {
+      targetState,
+      trail,
+      message,
+      currentLine,
+      isExecuting
+    } = useRobot()
+
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [robotState, setRobotState] = useState<RobotState>({
       x: 250,
       y: 250,
       rotation: 0,
     })
-    const [message, setMessage] = useState<string>("")
-    const [currentLine, setCurrentLine] = useState<number>(-1)
-    const [trail, setTrail] = useState<TrailPosition[]>([{ x: 250, y: 250 }])
-    const executionRef = useRef<(() => void) | null>(null)
     const animationFrameRef = useRef<number | null>(null)
-    const [targetState, setTargetState] = useState<RobotState>({
-      x: 250,
-      y: 250,
-      rotation: 0,
-    })
     const [hoverCoords, setHoverCoords] = useState<{ x: number; y: number } | null>(null)
 
     useImperativeHandle(ref, () => ({
       getCanvas: () => canvasRef.current,
     }))
 
-    useEffect(() => {
-      setRobotState({ x: 250, y: 250, rotation: 0 })
-      setTargetState({ x: 250, y: 250, rotation: 0 })
-      setMessage("")
-      setCurrentLine(-1)
-      setTrail([{ x: 250, y: 250 }])
-    }, [resetTrigger])
-
-    useEffect(() => {
-      setRobotState({ x: 250, y: 250, rotation: 0 })
-      setTargetState({ x: 250, y: 250, rotation: 0 })
-      setMessage("")
-      setCurrentLine(-1)
-      setTrail([{ x: 250, y: 250 }])
-    }, [clearTrigger])
-
+    // Snap to target state when not executing (handles reset/clear)
     useEffect(() => {
       if (!isExecuting) {
-        setMessage("")
-        setCurrentLine(-1)
+        setRobotState(targetState)
       }
-    }, [isExecuting])
+    }, [isExecuting, targetState])
 
     useEffect(() => {
       const animate = () => {
@@ -88,7 +56,7 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, RobotCanvasProps>(
           while (dRotation > 180) dRotation -= 360
           while (dRotation < -180) dRotation += 360
 
-          if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(dRotation) < 0.5) {
+          if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1 && Math.abs(dRotation) < 0.1) {
             return targetState
           }
 
@@ -347,50 +315,6 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, RobotCanvasProps>(
 
       ctx.restore()
     }, [robotState, trail])
-
-    useEffect(() => {
-      if (isExecuting) {
-        const parsed = parseCode(commands)
-
-        if (parsed.errors.length > 0) {
-          setMessage(`Oops! ${parsed.errors[0]}`)
-          onExecutionComplete()
-          return
-        }
-
-        const stopExecution = executeCommands(
-          parsed.commands,
-          (updater) => {
-            setTargetState((prev) => {
-              const newState = typeof updater === "function" ? updater(prev) : updater
-              if (newState.x !== prev.x || newState.y !== prev.y) {
-                setTrail((t) => [...t, { x: newState.x, y: newState.y }])
-              }
-              return newState
-            })
-          },
-          setMessage,
-          setCurrentLine,
-          () => {
-            setMessage("Mission complete!")
-            onExecutionComplete()
-          },
-        )
-
-        executionRef.current = stopExecution
-      } else {
-        if (executionRef.current) {
-          executionRef.current()
-          executionRef.current = null
-        }
-      }
-
-      return () => {
-        if (executionRef.current) {
-          executionRef.current()
-        }
-      }
-    }, [isExecuting, commands, onExecutionComplete])
 
     return (
       <Card className="bg-slate-800 border-4 border-white shadow-2xl overflow-hidden flex flex-col">
