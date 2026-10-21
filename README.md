@@ -10,7 +10,7 @@ Dibina dengan **Next.js 16**, **React 19**, **Tailwind CSS 4** dan **TypeScript*
 
 - **Editor kod kanak-kanak** — arahan baris demi baris dengan nombor baris dan highlight baris yang sedang dijalankan.
 - **Kanvas robot** — grid 500×500, jejak pergerakan (trail), caching background + animasi idle-aware (rAF hanya berjalan semasa robot bergerak).
-- **Sistem level** — 5 cabaran dengan sasaran, petunjuk, dan penarafan bintang (★★★ jika bilangan baris ≤ *par*).
+- **Sistem level** — 12 cabaran dengan sasaran, halangan 🧱, petunjuk, kod permulaan, dan penarafan bintang (★★★ jika bilangan baris ≤ *par*).
 - **Simpan & ringkasan** — simpan setiap execution (dengan screenshot) ke `localStorage`, kemudian cetak ringkasan.
 - **Progress disimpan** — bintang terbaik setiap level kekal dalam browser.
 
@@ -58,7 +58,7 @@ app/            Halaman utama (state game: name-input → playing → summary)
 components/      RobotCanvas, CodeEditor, LevelPanel, SummaryPage, UI (shadcn)
 lib/parser.ts   Parser arahan → Command[]
 lib/executor.ts Enjin gerakan beranimasi
-lib/levels.ts   Definisi level, semakan sasaran, penarafan bintang
+lib/levels.ts   Definisi level, halangan, semakan sasaran, penarafan bintang
 lib/storage.ts  Simpanan localStorage (executions + progress)
 lib/contexts/   RobotContext — state robot, level, dan lifecycle execution
 docs/           Spec reka bentuk

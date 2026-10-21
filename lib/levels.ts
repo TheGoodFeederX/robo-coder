@@ -7,6 +7,13 @@ export interface Level {
   hint: string
   /** Optional pre-filled starter code for the editor. */
   starter?: string
+  /** Grid cells the robot cannot enter. */
+  obstacles?: GridPoint[]
+}
+
+export interface GridPoint {
+  x: number
+  y: number
 }
 
 /** Goal coords are in grid units (10px each), origin at canvas centre, +y is up. */
@@ -46,6 +53,25 @@ export const LEVELS: Level[] = [
     starter: "function jog {\n  step 4\n  turn right\n}\n",
   },
   {
+    id: "wall",
+    title: "Wall",
+    goal: { x: -6, y: 0 },
+    par: 5,
+    obstacles: [{ x: -3, y: 0 }],
+    hint: "Ada dinding di (-3,0). Naik dulu, pusing kiri, kemudian turun ke sasaran.",
+  },
+  {
+    id: "slalom",
+    title: "Slalom",
+    goal: { x: 6, y: -6 },
+    par: 6,
+    obstacles: [
+      { x: 5, y: -6 },
+      { x: 6, y: -5 },
+    ],
+    hint: "Dua halangan tutup sebelah kiri dan atas sasaran — masuk dari kanan.",
+  },
+  {
     id: "teleport",
     title: "Teleport",
     goal: { x: -15, y: 15 },
@@ -65,7 +91,19 @@ export const SOLUTIONS: Record<string, string> = {
   moonwalk: "rotate 180\nstep 6",
   crossroads: "turn right\nstep 5\nturn right\nstep 4",
   "double-function": "function jog {\n  step 4\n  turn right\n}\nstart function jog\nstart function jog",
+  wall: "step 3\nturn left\nstep 6\nturn left\nstep 3",
+  slalom: "turn right\nstep 7\nturn right\nstep 6\nturn right\nstep 1",
   teleport: "tp -15,15",
+}
+
+/** Pixel position -> grid cell (rounded). */
+export function toCell(state: { x: number; y: number }): GridPoint {
+  return { x: Math.round((state.x - 250) / 10), y: Math.round((250 - state.y) / 10) }
+}
+
+export function isBlocked(state: { x: number; y: number }, obstacles: GridPoint[] = []): boolean {
+  const cell = toCell(state)
+  return obstacles.some((o) => o.x === cell.x && o.y === cell.y)
 }
 
 /** Tolerance in grid units. */

@@ -33,4 +33,17 @@ describe("levels", () => {
     }
     expect(new Set(LEVELS.map((l) => l.id)).size).toBe(LEVELS.length)
   })
+
+  test("obstacles are inside the grid, unique, and never on the goal", () => {
+    for (const level of LEVELS) {
+      const obstacles = level.obstacles ?? []
+      const cells = obstacles.map((o) => `${o.x},${o.y}`)
+      expect(new Set(cells).size).toBe(cells.length)
+      for (const o of obstacles) {
+        expect(Math.abs(o.x)).toBeLessThanOrEqual(22)
+        expect(Math.abs(o.y)).toBeLessThanOrEqual(22)
+        expect(o).not.toEqual(level.goal)
+      }
+    }
+  })
 })

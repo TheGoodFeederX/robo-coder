@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from "react"
 import { Command, parseCode } from "@/lib/parser"
 import { executeCommands } from "@/lib/executor"
-import { LEVELS, countLines, isAtGoal, starsFor, type Level } from "@/lib/levels"
+import { LEVELS, countLines, isAtGoal, isBlocked, starsFor, type Level } from "@/lib/levels"
 import { getProgress, recordLevelResult } from "@/lib/storage"
 import type { ProgressMap } from "@/lib/types"
 
@@ -145,6 +145,13 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
         setStars(earned)
         setProgress(recordLevelResult(levelRef.current.id, earned, lines))
         setMessage(`Level cleared with ${"★".repeat(earned)}!`)
+      },
+      {
+        isBlocked: (state) => isBlocked(state, levelRef.current.obstacles),
+        onBlocked: () => {
+          setIsExecuting(false)
+          executionRef.current = null
+        },
       },
     )
 

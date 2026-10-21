@@ -266,6 +266,33 @@ const drawGoal = (ctx: CanvasRenderingContext2D, goal: { x: number; y: number })
   ctx.restore()
 }
 
+const drawObstacles = (ctx: CanvasRenderingContext2D, obstacles: { x: number; y: number }[]) => {
+  for (const o of obstacles) {
+    const cx = 250 + o.x * 10
+    const cy = 250 - o.y * 10
+
+    ctx.save()
+    // Brick block, 26px so it reads clearly on the 10px grid
+    const gradient = ctx.createLinearGradient(cx - 13, cy - 13, cx + 13, cy + 13)
+    gradient.addColorStop(0, "#ef4444")
+    gradient.addColorStop(1, "#991b1b")
+    ctx.fillStyle = gradient
+    ctx.beginPath()
+    ctx.roundRect(cx - 13, cy - 13, 26, 26, 4)
+    ctx.fill()
+
+    ctx.strokeStyle = "#fca5a5"
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(cx - 13, cy - 4)
+    ctx.lineTo(cx + 13, cy - 4)
+    ctx.moveTo(cx - 13, cy + 5)
+    ctx.lineTo(cx + 13, cy + 5)
+    ctx.stroke()
+    ctx.restore()
+  }
+}
+
 export interface RobotCanvasRef {
   getCanvas: () => HTMLCanvasElement | null
 }
@@ -390,6 +417,7 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
         drawBackground(ctx, canvas.width, canvas.height)
       }
 
+      if (level?.obstacles?.length) drawObstacles(ctx, level.obstacles)
       if (level) drawGoal(ctx, level.goal)
       drawTrail(ctx, trail)
       drawRobot(ctx, robotState)
