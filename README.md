@@ -4,6 +4,8 @@ Aplikasi latihan pengaturcaraan untuk kanak-kanak dalam bentuk permainan. Tulis 
 
 Dibina dengan **Next.js 16**, **React 19**, **Tailwind CSS 4** dan **TypeScript**.
 
+🔗 **Live:** https://robo-coder.vercel.app · [![CI](https://github.com/TheGoodFeederX/robo-coder/actions/workflows/ci.yml/badge.svg)](https://github.com/TheGoodFeederX/robo-coder/actions/workflows/ci.yml)
+
 ## Ciri-ciri
 
 - **Editor kod kanak-kanak** — arahan baris demi baris dengan nombor baris dan highlight baris yang sedang dijalankan.
@@ -66,7 +68,10 @@ docs/           Spec reka bentuk
 
 ### Vercel
 
-Import repo di Vercel dan deploy — tiada konfigurasi tambahan diperlukan.
+Repo ini sudah disambung ke projek Vercel `robo-coder` (team `thegoodfeederxs-projects`). Setiap push ke `main` membina dan deploy secara automatik.
+
+- Production: https://robo-coder.vercel.app
+- Manual: `vercel deploy --prod`
 
 ### Docker
 
