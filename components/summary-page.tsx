@@ -53,6 +53,11 @@ export function SummaryPage({ playerName, savedExecutions, onBackToStart }: Summ
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-2xl font-bold text-purple-600 mb-2">Execution #{index + 1}</h3>
+                      {execution.stars ? (
+                        <p className="text-yellow-500 text-xl" title={`${execution.stars} stars`}>
+                          {"★".repeat(execution.stars)}
+                        </p>
+                      ) : null}
                       <p className="text-sm text-slate-500">{new Date(execution.timestamp).toLocaleString()}</p>
                     </div>
 

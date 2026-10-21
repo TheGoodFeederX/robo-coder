@@ -237,6 +237,35 @@ const drawRobot = (ctx: CanvasRenderingContext2D, robotState: RobotState) => {
   ctx.restore()
 }
 
+const drawGoal = (ctx: CanvasRenderingContext2D, goal: { x: number; y: number }) => {
+  const cx = 250 + goal.x * 10
+  const cy = 250 - goal.y * 10
+
+  ctx.save()
+  ctx.strokeStyle = "rgba(250, 204, 21, 0.9)"
+  ctx.lineWidth = 3
+  ctx.setLineDash([6, 6])
+  ctx.beginPath()
+  ctx.arc(cx, cy, 16, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.setLineDash([])
+
+  ctx.fillStyle = "rgba(250, 204, 21, 0.85)"
+  ctx.beginPath()
+  const spikes = 5
+  for (let i = 0; i < spikes * 2; i++) {
+    const r = i % 2 === 0 ? 13 : 5.5
+    const a = (i * Math.PI) / spikes - Math.PI / 2
+    const px = cx + r * Math.cos(a)
+    const py = cy + r * Math.sin(a)
+    if (i === 0) ctx.moveTo(px, py)
+    else ctx.lineTo(px, py)
+  }
+  ctx.closePath()
+  ctx.fill()
+  ctx.restore()
+}
+
 export interface RobotCanvasRef {
   getCanvas: () => HTMLCanvasElement | null
 }
@@ -248,7 +277,8 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
       trail,
       message,
       currentLine,
-      isExecuting
+      isExecuting,
+      level,
     } = useRobot()
 
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -360,9 +390,10 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
         drawBackground(ctx, canvas.width, canvas.height)
       }
 
+      if (level) drawGoal(ctx, level.goal)
       drawTrail(ctx, trail)
       drawRobot(ctx, robotState)
-    }, [robotState, trail])
+    }, [robotState, trail, level])
 
     return (
       <Card className="bg-slate-800 border-4 border-white shadow-2xl overflow-hidden flex flex-col">

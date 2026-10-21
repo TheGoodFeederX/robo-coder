@@ -1,8 +1,11 @@
 "use client"
 
-import React, { createContext, useContext, useState, useRef, useCallback } from "react"
+import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from "react"
 import { Command, parseCode } from "@/lib/parser"
 import { executeCommands } from "@/lib/executor"
+import { LEVELS, countLines, isAtGoal, starsFor, type Level } from "@/lib/levels"
+import { getProgress, recordLevelResult } from "@/lib/storage"
+import type { ProgressMap } from "@/lib/types"
 
 export interface RobotState {
   x: number
@@ -17,6 +20,13 @@ interface RobotContextType {
   currentLine: number
   message: string
   trail: { x: number; y: number }[]
+  level: Level
+  levelIndex: number
+  won: boolean
+  stars: number
+  progress: ProgressMap
+  selectLevel: (index: number) => void
+  nextLevel: () => void
   updateCommands: (code: string) => void
   runCommands: () => void
   stopExecution: () => void
@@ -33,8 +43,17 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
   const [currentLine, setCurrentLine] = useState(-1)
   const [message, setMessage] = useState("")
   const [trail, setTrail] = useState<{ x: number; y: number }[]>([{ x: 250, y: 250 }])
+  const [levelIndex, setLevelIndex] = useState(0)
+  const [won, setWon] = useState(false)
+  const [stars, setStars] = useState(0)
+  const [progress, setProgress] = useState<ProgressMap>({})
 
   const executionRef = useRef<(() => void) | null>(null)
+  const targetRef = useRef(targetState)
+  const levelRef = useRef<Level>(LEVELS[0])
+
+  const level = LEVELS[levelIndex]
+  levelRef.current = level
 
   const updateCommands = (code: string) => setCommands(code)
 
@@ -51,14 +70,33 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
   const resetRobot = useCallback(() => {
     stopExecution()
     setTargetState({ x: 250, y: 250, rotation: 0 })
+    targetRef.current = { x: 250, y: 250, rotation: 0 }
     setTrail([{ x: 250, y: 250 }])
     setMessage("")
+    setWon(false)
+    setStars(0)
   }, [stopExecution])
 
   const clearAll = useCallback(() => {
     resetRobot()
     setCommands("")
   }, [resetRobot])
+
+  // Progress lives in localStorage, read after mount to stay SSR-safe.
+  useEffect(() => setProgress(getProgress()), [])
+
+  const selectLevel = useCallback(
+    (index: number) => {
+      setLevelIndex(Math.max(0, Math.min(LEVELS.length - 1, index)))
+      clearAll()
+    },
+    [clearAll],
+  )
+
+  const nextLevel = useCallback(() => {
+    setLevelIndex((i) => Math.min(LEVELS.length - 1, i + 1))
+    clearAll()
+  }, [clearAll])
 
   const runCommands = useCallback(() => {
     stopExecution()
@@ -69,25 +107,40 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
+    setWon(false)
+    setStars(0)
     setIsExecuting(true)
 
     const stop = executeCommands(
       parsed.commands,
       (updater) => {
-        setTargetState((prev) => {
-          const next = updater(prev)
-          if (next.x !== prev.x || next.y !== prev.y) {
-            setTrail((t) => [...t, { x: next.x, y: next.y }])
-          }
-          return next
-        })
+        // Compute eagerly so the final position is available synchronously.
+        const prev = targetRef.current
+        const next = updater(prev)
+        targetRef.current = next
+        setTargetState(next)
+        if (next.x !== prev.x || next.y !== prev.y) {
+          setTrail((t) => [...t, { x: next.x, y: next.y }])
+        }
       },
       setMessage,
       setCurrentLine,
       () => {
         setIsExecuting(false)
-        setMessage("Mission complete!")
         executionRef.current = null
+
+        const goal = levelRef.current.goal
+        if (!isAtGoal(targetRef.current, goal)) {
+          setMessage("Not there yet — try again!")
+          return
+        }
+
+        const lines = countLines(commands)
+        const earned = starsFor(lines, levelRef.current.par)
+        setWon(true)
+        setStars(earned)
+        setProgress(recordLevelResult(levelRef.current.id, earned, lines))
+        setMessage(`Level cleared with ${"★".repeat(earned)}!`)
       },
     )
 
@@ -97,6 +150,7 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
   return (
     <RobotContext.Provider value={{
       targetState, commands, isExecuting, currentLine, message, trail,
+      level, levelIndex, won, stars, progress, selectLevel, nextLevel,
       updateCommands, runCommands, stopExecution, resetRobot, clearAll
     }}>
       {children}

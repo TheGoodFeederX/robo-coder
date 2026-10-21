@@ -4,6 +4,7 @@ import { useState, useRef } from "react"
 import { RobotCanvas, type RobotCanvasRef } from "@/components/robot-canvas"
 import { CodeEditor } from "@/components/code-editor"
 import { PlayerNameInput } from "@/components/player-name-input"
+import { LevelPanel } from "@/components/level-panel"
 import { SummaryPage } from "@/components/summary-page"
 import { captureCanvasScreenshot } from "@/lib/canvas-screenshot"
 import { saveExecution, getSavedExecutions, clearSavedExecutions } from "@/lib/storage"
@@ -22,7 +23,7 @@ function PlaygroundContent() {
   const { toast } = useToast()
 
   // Use values and functions from RobotContext
-  const { commands, clearAll } = useRobot()
+  const { commands, clearAll, level, stars } = useRobot()
 
   const handleStartGame = (name: string) => {
     setPlayerName(name)
@@ -42,6 +43,8 @@ function PlaygroundContent() {
       playerName,
       commands,
       screenshot,
+      levelId: level.id,
+      stars,
     }
 
     saveExecution(execution)
@@ -84,6 +87,11 @@ function PlaygroundContent() {
           <p className="text-xl text-white/90 mt-2">
             Welcome back, {playerName}! Program your robot with simple commands!
           </p>
+        </div>
+
+        {/* Level Bar */}
+        <div className="pb-4">
+          <LevelPanel />
         </div>
 
         {/* Main Content - Split Screen */}
