@@ -2,14 +2,17 @@
 
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { LEVELS } from "@/lib/levels"
+import { LEVELS, countLines, lineBudget } from "@/lib/levels"
 import { useRobot } from "@/lib/contexts/robot-context"
 import { ArrowRight, Star } from "lucide-react"
 
 export function LevelPanel() {
-  const { level, levelIndex, selectLevel, nextLevel, won, stars, progress } = useRobot()
+  const { level, levelIndex, selectLevel, nextLevel, won, stars, progress, commands } = useRobot()
   const isLast = levelIndex === LEVELS.length - 1
   const cleared = Object.keys(progress).length
+  const used = countLines(commands)
+  const budget = lineBudget(level)
+  const overBudget = used > budget
 
   return (
     <Card className="bg-slate-800 border-4 border-white shadow-2xl p-4 flex flex-col gap-3">
@@ -19,6 +22,10 @@ export function LevelPanel() {
         </h3>
         <span className="text-yellow-300 text-sm">🏆 {cleared}/{LEVELS.length} cleared</span>
       </div>
+
+      <p className={`text-xs font-bold ${overBudget ? "text-red-400" : "text-white/70"}`}>
+        Commands: {used} / {budget} {overBudget ? "— terlalu banyak, pendekkan kod!" : ""}
+      </p>
 
       <p className="text-white/80 text-sm">
         Reach the ⭐ at <code className="text-yellow-300">({level.goal.x}, {level.goal.y})</code>.{" "}

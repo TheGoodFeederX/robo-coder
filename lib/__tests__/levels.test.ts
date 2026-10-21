@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest"
-import { GOAL_TOLERANCE, LEVELS, countLines, isAtGoal, starsFor, toGrid } from "../levels"
+import { GOAL_TOLERANCE, LEVELS, countLines, isAtGoal, lineBudget, starsFor, toGrid } from "../levels"
+import { SOLUTIONS } from "../levels"
 
 describe("levels", () => {
   test("grid conversion round-trips through canvas coords", () => {
@@ -32,6 +33,14 @@ describe("levels", () => {
       expect(level.par).toBeGreaterThan(0)
     }
     expect(new Set(LEVELS.map((l) => l.id)).size).toBe(LEVELS.length)
+  })
+
+  test("line budget is at least par and every reference solution fits it", () => {
+    for (const level of LEVELS) {
+      const budget = lineBudget(level)
+      expect(budget).toBeGreaterThanOrEqual(level.par)
+      expect(countLines(SOLUTIONS[level.id])).toBeLessThanOrEqual(budget)
+    }
   })
 
   test("obstacles are inside the grid, unique, and never on the goal", () => {

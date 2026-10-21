@@ -9,6 +9,8 @@ export interface Level {
   starter?: string
   /** Grid cells the robot cannot enter. */
   obstacles?: GridPoint[]
+  /** Hard cap on code lines. Defaults to par + 2. */
+  maxLines?: number
 }
 
 export interface GridPoint {
@@ -104,6 +106,11 @@ export function toCell(state: { x: number; y: number }): GridPoint {
 export function isBlocked(state: { x: number; y: number }, obstacles: GridPoint[] = []): boolean {
   const cell = toCell(state)
   return obstacles.some((o) => o.x === cell.x && o.y === cell.y)
+}
+
+/** Hard cap on code lines for a level. */
+export function lineBudget(level: Level): number {
+  return level.maxLines ?? level.par + 2
 }
 
 /** Tolerance in grid units. */

@@ -10,7 +10,8 @@ Dibina dengan **Next.js 16**, **React 19**, **Tailwind CSS 4** dan **TypeScript*
 
 - **Editor kod kanak-kanak** — arahan baris demi baris dengan nombor baris dan highlight baris yang sedang dijalankan.
 - **Kanvas robot** — grid 500×500, jejak pergerakan (trail), caching background + animasi idle-aware (rAF hanya berjalan semasa robot bergerak).
-- **Sistem level** — 12 cabaran dengan sasaran, halangan 🧱, petunjuk, kod permulaan, dan penarafan bintang (★★★ jika bilangan baris ≤ *par*).
+- **Sistem level** — 12 cabaran dengan sasaran, halangan 🧱, petunjuk, kod permulaan, dan had arahan (default *par + 2* baris).
+- **Bintang bermakna** — kod melebihi had arahan tak akan jalan; ★★★ hanya bila ≤ *par*, ★★ ≤ 1.5× *par*.
 - **Simpan & ringkasan** — simpan setiap execution (dengan screenshot) ke `localStorage`, kemudian cetak ringkasan.
 - **Progress disimpan** — bintang terbaik setiap level kekal dalam browser.
 

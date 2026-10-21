@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from "react"
 import { Command, parseCode } from "@/lib/parser"
 import { executeCommands } from "@/lib/executor"
-import { LEVELS, countLines, isAtGoal, isBlocked, starsFor, type Level } from "@/lib/levels"
+import { LEVELS, countLines, isAtGoal, isBlocked, lineBudget, starsFor, type Level } from "@/lib/levels"
 import { getProgress, recordLevelResult } from "@/lib/storage"
 import type { ProgressMap } from "@/lib/types"
 
@@ -108,6 +108,12 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
     const parsed = parseCode(commands)
     if (parsed.errors.length > 0) {
       setMessage(`Error: ${parsed.errors[0]}`)
+      return
+    }
+
+    const budget = lineBudget(levelRef.current)
+    if (countLines(commands) > budget) {
+      setMessage(`Too many commands: ${countLines(commands)}/${budget}. Shorten your code!`)
       return
     }
 
