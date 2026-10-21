@@ -87,16 +87,20 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
 
   const selectLevel = useCallback(
     (index: number) => {
-      setLevelIndex(Math.max(0, Math.min(LEVELS.length - 1, index)))
+      const clamped = Math.max(0, Math.min(LEVELS.length - 1, index))
+      setLevelIndex(clamped)
       clearAll()
+      setCommands(LEVELS[clamped].starter ?? "")
     },
     [clearAll],
   )
 
   const nextLevel = useCallback(() => {
-    setLevelIndex((i) => Math.min(LEVELS.length - 1, i + 1))
+    const clamped = Math.min(LEVELS.length - 1, levelIndex + 1)
+    setLevelIndex(clamped)
     clearAll()
-  }, [clearAll])
+    setCommands(LEVELS[clamped].starter ?? "")
+  }, [clearAll, levelIndex])
 
   const runCommands = useCallback(() => {
     stopExecution()
