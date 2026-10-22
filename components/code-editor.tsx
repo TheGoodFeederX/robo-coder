@@ -49,34 +49,34 @@ export function CodeEditor({
   return (
     <Card className="bg-slate-800 border-4 border-white shadow-2xl overflow-hidden flex flex-col">
       <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-4">
-        <h2 className="text-2xl font-bold text-white text-center">💻 Command Center</h2>
+        <h2 className="text-2xl font-bold text-white text-center">💻 Pusat Arahan</h2>
       </div>
 
       <div className="flex-1 flex flex-col p-6 gap-4">
         {/* Instructions */}
         <div className="bg-blue-500/20 border-2 border-blue-400 rounded-lg p-4">
-          <h3 className="text-lg font-bold text-white mb-2">📚 Available Commands:</h3>
+          <h3 className="text-lg font-bold text-white mb-2">📚 Arahan Tersedia:</h3>
           <ul className="text-white/90 space-y-1 text-sm">
             <li>
-              <code className="text-blue-300">step &lt;number&gt;</code> - Move forward
+              <code className="text-blue-300">step &lt;nombor&gt;</code> - Bergerak ke hadapan
             </li>
             <li>
-              <code className="text-blue-300">turn left/right</code> - Turn 90 degrees
+              <code className="text-blue-300">turn left/right</code> - Pusing 90 darjah
             </li>
             <li>
-              <code className="text-blue-300">rotate &lt;degrees&gt;</code> - Rotate any angle
+              <code className="text-blue-300">rotate &lt;darjah&gt;</code> - Pusing sebarang sudut
             </li>
             <li>
-              <code className="text-green-300">tp &lt;x,y&gt;</code> - Teleport to position
+              <code className="text-green-300">tp &lt;x,y&gt;</code> - Teleport ke kedudukan
             </li>
             <li>
-              <code className="text-purple-300">loop &lt;times&gt; {"{ }"}</code> - Repeat commands
+              <code className="text-purple-300">loop &lt;kali&gt; {"{ }"}</code> - Ulang arahan
             </li>
             <li>
-              <code className="text-orange-300">function &lt;id&gt; {"{ }"}</code> - Create a function
+              <code className="text-orange-300">function &lt;id&gt; {"{ }"}</code> - Buat fungsi
             </li>
             <li>
-              <code className="text-orange-300">start function &lt;id&gt;</code> - Run a function
+              <code className="text-orange-300">start function &lt;id&gt;</code> - Jalankan fungsi
             </li>
           </ul>
         </div>
@@ -101,7 +101,8 @@ export function CodeEditor({
               ref={textareaRef}
               value={code}
               onChange={(e) => onCodeChange(e.target.value)}
-              placeholder="Type your code here..."
+              placeholder="Tulis kod anda di sini..."
+              aria-label="Editor kod"
               className="flex-1 font-mono text-lg bg-slate-900 text-white border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none rounded-none leading-6"
               disabled={isExecuting}
             />
@@ -117,7 +118,7 @@ export function CodeEditor({
             size="lg"
           >
             <Play className="mr-2 h-5 w-5" />
-            Run Code
+            Jalankan
           </Button>
 
           <Button
@@ -127,7 +128,7 @@ export function CodeEditor({
             size="lg"
           >
             <Square className="mr-2 h-5 w-5" />
-            Stop
+            Berhenti
           </Button>
 
           <Button
@@ -137,7 +138,7 @@ export function CodeEditor({
             size="lg"
           >
             <RotateCcw className="mr-2 h-5 w-5" />
-            Reset
+            Set semula
           </Button>
 
           <Button
@@ -147,7 +148,7 @@ export function CodeEditor({
             size="lg"
           >
             <Save className="mr-2 h-5 w-5" />
-            Save
+            Simpan
           </Button>
         </div>
 
@@ -158,7 +159,7 @@ export function CodeEditor({
             variant="outline"
             className="border-2 border-white text-white hover:bg-white/10 bg-transparent"
           >
-            Clear Code
+            Kosongkan Kod
           </Button>
 
           <Button
@@ -167,7 +168,7 @@ export function CodeEditor({
             className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold shadow-lg"
           >
             <Flag className="mr-2 h-5 w-5" />
-            End Game
+            Tamatkan Permainan
           </Button>
         </div>
       </div>

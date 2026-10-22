@@ -11,6 +11,8 @@ export interface ExecuteOptions {
   isBlocked?: (state: RobotState) => boolean
   /** Called when the run stops early because of an obstacle. */
   onBlocked?: () => void
+  /** Movement cue for sound/feedback. */
+  onEvent?: (event: "step" | "turn") => void
 }
 
 export function executeCommands(
@@ -65,6 +67,7 @@ export function executeCommands(
 
           const moved = attemptMove()
           if (!moved) return
+          options.onEvent?.("step")
 
           await sleep(200) // Pause between each step for visualization
         }
@@ -75,6 +78,7 @@ export function executeCommands(
           rotation: prev.rotation + (direction === "left" ? -90 : 90),
         }))
         setMessage(`Turning ${direction}!`)
+        options.onEvent?.("turn")
       } else if (cmd.type === "rotate") {
         const degrees = cmd.value as number
         setRobotState((prev) => ({

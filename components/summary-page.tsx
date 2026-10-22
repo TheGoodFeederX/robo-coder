@@ -12,7 +12,7 @@ interface SummaryPageProps {
 }
 
 export function SummaryPage({ playerName, savedExecutions, onBackToStart }: SummaryPageProps) {
-  const handlePrint = () => {
+  const handleCetak = () => {
     window.print()
   }
 
@@ -20,29 +20,29 @@ export function SummaryPage({ playerName, savedExecutions, onBackToStart }: Summ
     <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex flex-col">
       <div className="container mx-auto p-4 flex-1">
         <div className="text-center py-6 mb-4 no-print">
-          <h1 className="text-5xl font-bold text-white drop-shadow-lg">🏆 Game Summary</h1>
-          <p className="text-2xl text-white/90 mt-2">Great work, {playerName}!</p>
+          <h1 className="text-5xl font-bold text-white drop-shadow-lg">🏆 Ringkasan Permainan</h1>
+          <p className="text-2xl text-white/90 mt-2">Syabas, {playerName}!</p>
           <p className="text-lg text-white/80 mt-1">
-            You saved {savedExecutions.length} execution{savedExecutions.length !== 1 ? "s" : ""}
+            Anda simpan {savedExecutions.length} rekod
           </p>
         </div>
 
         <div className="print-only text-center mb-4">
-          <h1 className="text-3xl font-bold">Game Summary</h1>
-          <p className="text-xl mt-2">Player: {playerName}</p>
-          <p className="text-base text-slate-600 mt-1">Total Executions: {savedExecutions.length}</p>
+          <h1 className="text-3xl font-bold">Ringkasan Permainan</h1>
+          <p className="text-xl mt-2">Pemain: {playerName}</p>
+          <p className="text-base text-slate-600 mt-1">Jumlah rekod: {savedExecutions.length}</p>
           <hr className="my-4 border-slate-300" />
         </div>
 
         {savedExecutions.length === 0 ? (
           <Card className="bg-white p-8 max-w-2xl mx-auto text-center">
-            <p className="text-xl text-slate-600 mb-6">No executions saved yet!</p>
+            <p className="text-xl text-slate-600 mb-6">Belum ada rekod disimpan!</p>
             <Button
               onClick={onBackToStart}
               className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-lg font-bold"
             >
               <Home className="mr-2 h-5 w-5" />
-              Start New Game
+              Mula Permainan Baru
             </Button>
           </Card>
         ) : (
@@ -52,7 +52,7 @@ export function SummaryPage({ playerName, savedExecutions, onBackToStart }: Summ
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-2xl font-bold text-purple-600 mb-2">Execution #{index + 1}</h3>
+                      <h3 className="text-2xl font-bold text-purple-600 mb-2">Rekod #{index + 1}</h3>
                       {execution.stars ? (
                         <p className="text-yellow-500 text-xl" title={`${execution.stars} stars`}>
                           {"★".repeat(execution.stars)}
@@ -62,7 +62,7 @@ export function SummaryPage({ playerName, savedExecutions, onBackToStart }: Summ
                     </div>
 
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-700 mb-2">Commands Used:</h4>
+                      <h4 className="text-lg font-semibold text-slate-700 mb-2">Arahan Digunakan:</h4>
                       <pre className="bg-slate-100 p-4 rounded-lg text-sm font-mono overflow-x-auto max-h-64 overflow-y-auto border-2 border-slate-300">
                         {execution.commands}
                       </pre>
@@ -70,7 +70,7 @@ export function SummaryPage({ playerName, savedExecutions, onBackToStart }: Summ
                   </div>
 
                   <div>
-                    <h4 className="text-lg font-semibold text-slate-700 mb-2">Robot Trail:</h4>
+                    <h4 className="text-lg font-semibold text-slate-700 mb-2">Jejak Robot:</h4>
                     <img
                       src={execution.screenshot || "/placeholder.svg"}
                       alt={`Execution ${index + 1} screenshot`}
@@ -83,18 +83,18 @@ export function SummaryPage({ playerName, savedExecutions, onBackToStart }: Summ
 
             <div className="text-center pt-4 no-print flex flex-wrap gap-4 justify-center pb-4">
               <Button
-                onClick={handlePrint}
+                onClick={handleCetak}
                 className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xl font-bold h-14 px-8 shadow-lg"
               >
                 <Printer className="mr-2 h-6 w-6" />
-                Print
+                Cetak
               </Button>
               <Button
                 onClick={onBackToStart}
                 className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-xl font-bold h-14 px-8 shadow-lg"
               >
                 <Home className="mr-2 h-6 w-6" />
-                Start New Game
+                Mula Permainan Baru
               </Button>
             </div>
           </div>
@@ -103,7 +103,7 @@ export function SummaryPage({ playerName, savedExecutions, onBackToStart }: Summ
 
       <footer className="py-4 text-center text-white/90 text-sm backdrop-blur-sm bg-black/10 no-print">
         <p className="flex items-center justify-center gap-2">
-          Made with <Heart className="w-4 h-4 fill-red-500 text-red-500" /> by Ustaz Najmi | 2025
+          Dibina dengan <Heart className="w-4 h-4 fill-red-500 text-red-500" /> by Ustaz Najmi | 2025
         </p>
       </footer>
 

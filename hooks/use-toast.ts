@@ -3,7 +3,8 @@
 // Inspired by react-hot-toast library
 import * as React from 'react'
 
-import type { ToastActionElement, ToastProps } from '@/components/ui/toast'
+interface ToastActionElement { altText?: string; action?: () => void; [k: string]: unknown }
+interface ToastProps { title?: string; description?: string; variant?: string; open?: boolean; onOpenChange?: (open: boolean) => void; [k: string]: unknown }
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000

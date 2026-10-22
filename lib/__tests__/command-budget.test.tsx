@@ -42,7 +42,7 @@ describe("command budget", () => {
     })
 
     expect(utils.getByTestId("executing").textContent).toBe("false")
-    expect(utils.getByTestId("message").textContent).toContain("Too many commands")
+    expect(utils.getByTestId("message").textContent).toContain("terlalu banyak")
   })
 
   test("code within budget runs", async () => {

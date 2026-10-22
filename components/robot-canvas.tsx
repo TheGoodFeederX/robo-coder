@@ -426,15 +426,17 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
     return (
       <Card className="bg-slate-800 border-4 border-white shadow-2xl overflow-hidden flex flex-col">
         <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-4">
-          <h2 className="text-2xl font-bold text-white text-center">Robot Mission Field</h2>
+          <h2 className="text-2xl font-bold text-white text-center">Medan Misi Robot</h2>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
+        <div className="flex-1 flex flex-col items-center justify-center p-3 sm:p-6 relative">
           <canvas
             ref={canvasRef}
             width={500}
             height={500}
-            className="border-4 border-slate-600 rounded-lg shadow-lg cursor-crosshair"
+            role="img"
+            aria-label={`Medan robot. Robot di (${Math.round((robotState.x - 250) / 10)}, ${Math.round((250 - robotState.y) / 10)}). Sasaran (${level?.goal.x ?? 0}, ${level?.goal.y ?? 0}).`}
+            className="w-full max-w-[500px] h-auto aspect-square border-4 border-slate-600 rounded-lg shadow-lg cursor-crosshair touch-none"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
           />
@@ -448,14 +450,18 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
           )}
 
           {message && (
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white rounded-full px-6 py-3 shadow-lg animate-bounce">
-              <p className="text-lg font-bold text-slate-800">{message}</p>
+            <div
+              role="status"
+              aria-live="polite"
+              className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white rounded-full px-6 py-3 shadow-lg animate-bounce max-w-[90%]"
+            >
+              <p className="text-base sm:text-lg font-bold text-slate-800">{message}</p>
             </div>
           )}
 
           {currentLine >= 0 && (
             <div className="absolute top-8 right-8 bg-yellow-400 rounded-lg px-4 py-2 shadow-lg">
-              <p className="text-sm font-bold text-slate-800">Running line {currentLine + 1}</p>
+              <p className="text-sm font-bold text-slate-800">Baris {currentLine + 1}</p>
             </div>
           )}
         </div>

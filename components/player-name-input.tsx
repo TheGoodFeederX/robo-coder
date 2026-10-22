@@ -29,20 +29,20 @@ export function PlayerNameInput({ onStartGame }: PlayerNameInputProps) {
         <Card className="bg-white p-8 max-w-md w-full shadow-2xl">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-purple-600 mb-2">🤖 Robo-Coder Playground</h1>
-            <p className="text-lg text-slate-600">Welcome, young coder!</p>
+            <p className="text-lg text-slate-600">Selamat datang, coder muda!</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="playerName" className="text-lg font-semibold text-slate-700">
-                What's your name?
+                Siapa nama anda?
               </Label>
               <Input
                 id="playerName"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your name"
+                placeholder="Masukkan nama anda"
                 className="text-lg h-12 border-2 border-purple-300 focus:border-purple-500"
                 autoFocus
               />
@@ -53,7 +53,7 @@ export function PlayerNameInput({ onStartGame }: PlayerNameInputProps) {
               disabled={!name.trim()}
               className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-xl font-bold h-14 shadow-lg"
             >
-              Start Coding! 🚀
+              Mula Coding! 🚀
             </Button>
           </form>
         </Card>
@@ -61,7 +61,7 @@ export function PlayerNameInput({ onStartGame }: PlayerNameInputProps) {
 
       <footer className="py-4 text-center text-white/90 text-sm backdrop-blur-sm bg-black/10">
         <p className="flex items-center justify-center gap-2">
-          Made with <Heart className="w-4 h-4 fill-red-500 text-red-500" /> by Ustaz Najmi | 2025
+          Dibina dengan <Heart className="w-4 h-4 fill-red-500 text-red-500" /> by Ustaz Najmi | 2025
         </p>
       </footer>
     </div>

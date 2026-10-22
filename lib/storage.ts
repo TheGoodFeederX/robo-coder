@@ -2,6 +2,9 @@ import type { ProgressMap, SavedExecution } from "./types"
 
 const STORAGE_KEY = "robo-coder-saves"
 const PROGRESS_KEY = "robo-coder-progress"
+const PLAYER_KEY = "robo-coder-player"
+const LEVEL_KEY = "robo-coder-level"
+const SOUND_KEY = "robo-coder-sound"
 
 export function getSavedExecutions(): SavedExecution[] {
   if (typeof window === "undefined") return []
@@ -37,6 +40,39 @@ export function recordLevelResult(levelId: string, stars: number, lines: number)
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress))
   }
   return progress
+}
+
+export function getPlayerName(): string {
+  if (typeof window === "undefined") return ""
+  return localStorage.getItem(PLAYER_KEY) ?? ""
+}
+
+export function savePlayerName(name: string): void {
+  if (typeof window !== "undefined") localStorage.setItem(PLAYER_KEY, name)
+}
+
+export function clearPlayerName(): void {
+  if (typeof window !== "undefined") localStorage.removeItem(PLAYER_KEY)
+}
+
+export function getLevelIndex(): number {
+  if (typeof window === "undefined") return 0
+  const raw = localStorage.getItem(LEVEL_KEY)
+  const index = raw ? Number.parseInt(raw, 10) : 0
+  return Number.isFinite(index) && index >= 0 ? index : 0
+}
+
+export function saveLevelIndex(index: number): void {
+  if (typeof window !== "undefined") localStorage.setItem(LEVEL_KEY, String(index))
+}
+
+export function getSoundEnabled(): boolean {
+  if (typeof window === "undefined") return true
+  return localStorage.getItem(SOUND_KEY) !== "off"
+}
+
+export function saveSoundEnabled(enabled: boolean): void {
+  if (typeof window !== "undefined") localStorage.setItem(SOUND_KEY, enabled ? "on" : "off")
 }
 
 export function clearProgress(): void {

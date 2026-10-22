@@ -1,13 +1,20 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useEffect, useState, useRef } from "react"
 import { RobotCanvas, type RobotCanvasRef } from "@/components/robot-canvas"
 import { CodeEditor } from "@/components/code-editor"
 import { PlayerNameInput } from "@/components/player-name-input"
 import { LevelPanel } from "@/components/level-panel"
 import { SummaryPage } from "@/components/summary-page"
 import { captureCanvasScreenshot } from "@/lib/canvas-screenshot"
-import { saveExecution, getSavedExecutions, clearSavedExecutions } from "@/lib/storage"
+import {
+  saveExecution,
+  getSavedExecutions,
+  clearSavedExecutions,
+  clearPlayerName,
+  getPlayerName,
+  savePlayerName,
+} from "@/lib/storage"
 import { useToast } from "@/hooks/use-toast"
 import type { SavedExecution } from "@/lib/types"
 import { Heart } from "lucide-react"
@@ -23,10 +30,20 @@ function PlaygroundContent() {
   const { toast } = useToast()
 
   // Use values and functions from RobotContext
-  const { commands, clearAll, level, stars } = useRobot()
+  const { commands, clearAll, level, stars, selectLevel } = useRobot()
+
+  // Resume the last player automatically so a kid can close the tab and come back.
+  useEffect(() => {
+    const saved = getPlayerName()
+    if (!saved) return
+    setPlayerName(saved)
+    setSavedExecutions(getSavedExecutions())
+    setGameState("playing")
+  }, [])
 
   const handleStartGame = (name: string) => {
     setPlayerName(name)
+    savePlayerName(name)
     setGameState("playing")
     setSavedExecutions([])
     clearSavedExecutions()
@@ -51,11 +68,9 @@ function PlaygroundContent() {
     setSavedExecutions((prev) => [...prev, execution])
 
     toast({
-      title: "Saved!",
-      description: "Your code execution has been saved.",
+      title: "Disimpan!",
+      description: "Rekod kod anda telah disimpan.",
     })
-
-    clearAll()
   }
 
   const handleEndGame = () => {
@@ -65,6 +80,9 @@ function PlaygroundContent() {
 
   const handleBackToStart = () => {
     clearAll()
+    selectLevel(0)
+    clearPlayerName()
+    setPlayerName("")
     setSavedExecutions([])
     clearSavedExecutions()
     setGameState("name-input")
@@ -85,7 +103,7 @@ function PlaygroundContent() {
         <div className="text-center py-6">
           <h1 className="text-5xl font-bold text-white drop-shadow-lg">🤖 Robo-Coder Playground</h1>
           <p className="text-xl text-white/90 mt-2">
-            Welcome back, {playerName}! Program your robot with simple commands!
+            Selamat kembali, {playerName}! Gerakkan robot dengan arahan mudah!
           </p>
         </div>
 
@@ -111,7 +129,7 @@ function PlaygroundContent() {
 
       <footer className="py-4 text-center text-white/90 text-sm backdrop-blur-sm bg-black/10">
         <p className="flex items-center justify-center gap-2">
-          Made with <Heart className="w-4 h-4 fill-red-500 text-red-500" /> by Ustaz Najmi | 2025
+          Dibina dengan <Heart className="w-4 h-4 fill-red-500 text-red-500" /> by Ustaz Najmi | 2025
         </p>
       </footer>
     </div>

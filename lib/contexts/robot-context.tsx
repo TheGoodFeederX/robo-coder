@@ -1,10 +1,18 @@
 "use client"
 
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from "react"
-import { Command, parseCode } from "@/lib/parser"
+import { parseCode } from "@/lib/parser"
 import { executeCommands } from "@/lib/executor"
 import { LEVELS, countLines, isAtGoal, isBlocked, lineBudget, starsFor, type Level } from "@/lib/levels"
-import { getProgress, recordLevelResult } from "@/lib/storage"
+import {
+  getLevelIndex,
+  getProgress,
+  getSoundEnabled,
+  recordLevelResult,
+  saveLevelIndex,
+  saveSoundEnabled,
+} from "@/lib/storage"
+import { play, setMuted } from "@/lib/sfx"
 import type { ProgressMap } from "@/lib/types"
 
 export interface RobotState {
@@ -24,15 +32,23 @@ interface RobotContextType {
   levelIndex: number
   won: boolean
   stars: number
+  attempts: number
+  hintUsed: boolean
+  soundOn: boolean
   progress: ProgressMap
   selectLevel: (index: number) => void
   nextLevel: () => void
+  revealHint: () => void
+  toggleSound: () => void
   updateCommands: (code: string) => void
   runCommands: () => void
   stopExecution: () => void
   resetRobot: () => void
   clearAll: () => void
 }
+
+/** Hint costs the third star, so hints stay honest. */
+const MAX_STARS_WITH_HINT = 2
 
 const RobotContext = createContext<RobotContextType | undefined>(undefined)
 
@@ -46,14 +62,19 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
   const [levelIndex, setLevelIndex] = useState(0)
   const [won, setWon] = useState(false)
   const [stars, setStars] = useState(0)
+  const [attempts, setAttempts] = useState(0)
+  const [hintUsed, setHintUsed] = useState(false)
+  const [soundOn, setSoundOn] = useState(true)
   const [progress, setProgress] = useState<ProgressMap>({})
 
   const executionRef = useRef<(() => void) | null>(null)
   const targetRef = useRef(targetState)
   const levelRef = useRef<Level>(LEVELS[0])
+  const hintRef = useRef(false)
 
   const level = LEVELS[levelIndex]
   levelRef.current = level
+  hintRef.current = hintUsed
 
   const updateCommands = (code: string) => setCommands(code)
 
@@ -75,6 +96,8 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
     setMessage("")
     setWon(false)
     setStars(0)
+    setAttempts(0)
+    setHintUsed(false)
   }, [stopExecution])
 
   const clearAll = useCallback(() => {
@@ -82,43 +105,69 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
     setCommands("")
   }, [resetRobot])
 
-  // Progress lives in localStorage, read after mount to stay SSR-safe.
-  useEffect(() => setProgress(getProgress()), [])
+  // Browser-only state (progress, last level, sound pref) is read after mount for SSR safety.
+  useEffect(() => {
+    const savedSound = getSoundEnabled()
+    setSoundOn(savedSound)
+    setMuted(!savedSound)
+    setProgress(getProgress())
 
-  const selectLevel = useCallback(
+    const savedLevel = getLevelIndex()
+    if (savedLevel > 0 && savedLevel < LEVELS.length) {
+      setLevelIndex(savedLevel)
+      setCommands(LEVELS[savedLevel].starter ?? "")
+    }
+  }, [])
+
+  const goToLevel = useCallback(
     (index: number) => {
       const clamped = Math.max(0, Math.min(LEVELS.length - 1, index))
       setLevelIndex(clamped)
+      saveLevelIndex(clamped)
       clearAll()
       setCommands(LEVELS[clamped].starter ?? "")
     },
     [clearAll],
   )
 
-  const nextLevel = useCallback(() => {
-    const clamped = Math.min(LEVELS.length - 1, levelIndex + 1)
-    setLevelIndex(clamped)
-    clearAll()
-    setCommands(LEVELS[clamped].starter ?? "")
-  }, [clearAll, levelIndex])
+  const selectLevel = useCallback((index: number) => goToLevel(index), [goToLevel])
+
+  const nextLevel = useCallback(() => goToLevel(levelIndex + 1), [goToLevel, levelIndex])
+
+  const revealHint = useCallback(() => {
+    setHintUsed(true)
+    play("click")
+  }, [])
+
+  const toggleSound = useCallback(() => {
+    setSoundOn((on) => {
+      const next = !on
+      saveSoundEnabled(next)
+      setMuted(!next)
+      if (next) play("click")
+      return next
+    })
+  }, [])
 
   const runCommands = useCallback(() => {
     stopExecution()
 
     const parsed = parseCode(commands)
     if (parsed.errors.length > 0) {
-      setMessage(`Error: ${parsed.errors[0]}`)
+      setMessage(`Ralat: ${parsed.errors[0]}`)
       return
     }
 
     const budget = lineBudget(levelRef.current)
-    if (countLines(commands) > budget) {
-      setMessage(`Too many commands: ${countLines(commands)}/${budget}. Shorten your code!`)
+    const lines = countLines(commands)
+    if (lines > budget) {
+      setMessage(`Arahan terlalu banyak: ${lines}/${budget}. Pendekkan kod anda!`)
       return
     }
 
     setWon(false)
     setStars(0)
+    setAttempts((n) => n + 1)
     setIsExecuting(true)
 
     const stop = executeCommands(
@@ -139,25 +188,26 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
         setIsExecuting(false)
         executionRef.current = null
 
-        const goal = levelRef.current.goal
-        if (!isAtGoal(targetRef.current, goal)) {
-          setMessage("Not there yet — try again!")
+        if (!isAtGoal(targetRef.current, levelRef.current.goal)) {
+          setMessage("Belum sampai — cuba lagi!")
           return
         }
 
-        const lines = countLines(commands)
-        const earned = starsFor(lines, levelRef.current.par)
+        const earned = Math.min(starsFor(lines, levelRef.current.par), hintRef.current ? MAX_STARS_WITH_HINT : 3)
         setWon(true)
         setStars(earned)
         setProgress(recordLevelResult(levelRef.current.id, earned, lines))
-        setMessage(`Level cleared with ${"★".repeat(earned)}!`)
+        setMessage(`Tahap selesai! ${"★".repeat(earned)}`)
+        play("win")
       },
       {
         isBlocked: (state) => isBlocked(state, levelRef.current.obstacles),
         onBlocked: () => {
           setIsExecuting(false)
           executionRef.current = null
+          play("crash")
         },
+        onEvent: (event) => play(event),
       },
     )
 
@@ -165,11 +215,33 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
   }, [commands, stopExecution])
 
   return (
-    <RobotContext.Provider value={{
-      targetState, commands, isExecuting, currentLine, message, trail,
-      level, levelIndex, won, stars, progress, selectLevel, nextLevel,
-      updateCommands, runCommands, stopExecution, resetRobot, clearAll
-    }}>
+    <RobotContext.Provider
+      value={{
+        targetState,
+        commands,
+        isExecuting,
+        currentLine,
+        message,
+        trail,
+        level,
+        levelIndex,
+        won,
+        stars,
+        attempts,
+        hintUsed,
+        soundOn,
+        progress,
+        selectLevel,
+        nextLevel,
+        revealHint,
+        toggleSound,
+        updateCommands,
+        runCommands,
+        stopExecution,
+        resetRobot,
+        clearAll,
+      }}
+    >
       {children}
     </RobotContext.Provider>
   )
