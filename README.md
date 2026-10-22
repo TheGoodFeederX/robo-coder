@@ -9,6 +9,10 @@ Dibina dengan **Next.js 16**, **React 19**, **Tailwind CSS 4** dan **TypeScript*
 ## Ciri-ciri
 
 - **Editor kod kanak-kanak** — arahan baris demi baris dengan nombor baris dan highlight baris yang sedang dijalankan.
+- **Petunjuk berharga** — petunjuk tersorok; membukanya hadkan bintang kepada ★★. Percubaan dikira setiap tahap.
+- **Kesan bunyi** — Web Audio (tiada fail aset): langkah, pusingan, kemenangan, perlanggaran. Boleh dimatikan; pilihan disimpan.
+- **Sambung semula** — nama pemain, tahap terakhir dan progress dipulihkan bila tab dibuka semula.
+- **Responsif** — kanvas ikut lebar skrin, mesej status guna `aria-live` untuk pembaca skrin.
 - **Kanvas robot** — grid 500×500, jejak pergerakan (trail), caching background + animasi idle-aware (rAF hanya berjalan semasa robot bergerak).
 - **Sistem level** — 12 cabaran dengan sasaran, halangan 🧱, petunjuk, kod permulaan, dan had arahan (default *par + 2* baris).
 - **Bintang bermakna** — kod melebihi had arahan tak akan jalan; ★★★ hanya bila ≤ *par*, ★★ ≤ 1.5× *par*.
@@ -48,6 +52,7 @@ pnpm dev        # http://localhost:3000
 pnpm test       # vitest (jsdom)
 pnpm typecheck  # tsc --noEmit
 pnpm build      # production build
+pnpm start      # serve build standalone (salin static + public automatik)
 ```
 
 > Guna **pnpm 12** (`packageManager` dalam `package.json`). Sharp build scripts dinyahlaku melalui `pnpm-workspace.yaml`.
@@ -60,7 +65,8 @@ components/      RobotCanvas, CodeEditor, LevelPanel, SummaryPage, UI (shadcn)
 lib/parser.ts   Parser arahan → Command[]
 lib/executor.ts Enjin gerakan beranimasi
 lib/levels.ts   Definisi level, halangan, semakan sasaran, penarafan bintang
-lib/storage.ts  Simpanan localStorage (executions + progress)
+lib/sfx.ts      Kesan bunyi Web Audio (tanpa aset)
+lib/storage.ts  Simpanan localStorage (executions, progress, pemain, tahap, bunyi)
 lib/contexts/   RobotContext — state robot, level, dan lifecycle execution
 docs/           Spec reka bentuk
 ```
