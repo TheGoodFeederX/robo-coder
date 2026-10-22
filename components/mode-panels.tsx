@@ -46,8 +46,21 @@ export function ExamPanel({ playerName }: { playerName: string }) {
 
   const tasks = exam.tasks
   const task = tasks[examTaskIndex]
+  const allowed =
+    exam.players.length === 0 || exam.players.some((p) => p.toLowerCase() === playerName.trim().toLowerCase())
   const isLast = examTaskIndex === tasks.length - 1
   const done = examResults.filter((r) => r.completed).length
+
+  if (!allowed) {
+    return (
+      <Card className="bg-slate-800 border-4 border-white shadow-2xl p-4">
+        <p className="text-white font-bold">🚫 Nama anda tiada dalam senarai pemain ujian ini.</p>
+        <p className="text-white/60 text-sm mt-1">
+          Minta guru tambah &quot;{playerName}&quot; di Panel Guru, atau tekan Tukar mod untuk mod lain.
+        </p>
+      </Card>
+    )
+  }
 
   if (!task) {
     return (

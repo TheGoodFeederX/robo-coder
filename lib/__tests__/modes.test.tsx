@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 import { RobotProvider, useRobot } from "@/lib/contexts/robot-context"
 import { DEFAULT_EXAM } from "@/lib/exam"
+import { ExamPanel } from "@/components/mode-panels"
 
 function Probe({ code }: { code: string }) {
   const { mode, chooseMode, updateCommands, runCommands, message, won, attempts, examResults, submitExam } = useRobot()
@@ -114,6 +115,30 @@ describe("game modes", () => {
 
     // First exam task is (0,5) with "step 5".
     expect(utils.getByTestId("done").textContent).toBe("1")
+  })
+
+  test("an exam with a player allow-list only lets listed names take it", async () => {
+    const restricted = { ...DEFAULT_EXAM, players: ["Siti"] }
+    function AllowProbe() {
+      const { exam, startExam } = useRobot()
+      return (
+        <div>
+          <span data-testid="players">{exam.players.join(",")}</span>
+          <button data-testid="start" onClick={() => startExam(restricted)} />
+          <ExamPanel playerName="Ali" />
+        </div>
+      )
+    }
+
+    const utils = render(
+      <RobotProvider>
+        <AllowProbe />
+      </RobotProvider>,
+    )
+    act(() => {
+      fireEvent.click(utils.getByTestId("start"))
+    })
+    expect(screen.getByText(/tiada dalam senarai pemain/i)).toBeTruthy()
   })
 
   test("submitting an exam stores a result with the player name", async () => {
