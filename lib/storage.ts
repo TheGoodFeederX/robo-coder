@@ -1,10 +1,18 @@
 import type { ProgressMap, SavedExecution } from "./types"
+import { DEFAULT_EXAM, type Exam, type ExamResult } from "./exam"
+import type { Mode } from "./modes"
 
 const STORAGE_KEY = "robo-coder-saves"
 const PROGRESS_KEY = "robo-coder-progress"
 const PLAYER_KEY = "robo-coder-player"
 const LEVEL_KEY = "robo-coder-level"
 const SOUND_KEY = "robo-coder-sound"
+const MODE_KEY = "robo-coder-mode"
+const EXAM_KEY = "robo-coder-exam"
+const RESULTS_KEY = "robo-coder-exam-results"
+const PIN_KEY = "robo-coder-admin-pin"
+
+export const DEFAULT_ADMIN_PIN = "1234"
 
 export function getSavedExecutions(): SavedExecution[] {
   if (typeof window === "undefined") return []
@@ -73,6 +81,64 @@ export function getSoundEnabled(): boolean {
 
 export function saveSoundEnabled(enabled: boolean): void {
   if (typeof window !== "undefined") localStorage.setItem(SOUND_KEY, enabled ? "on" : "off")
+}
+
+export function getMode(): Mode | null {
+  if (typeof window === "undefined") return null
+  const raw = localStorage.getItem(MODE_KEY)
+  return raw === "bebas" || raw === "jelajah" || raw === "ujian" ? raw : null
+}
+
+export function saveMode(mode: Mode): void {
+  if (typeof window !== "undefined") localStorage.setItem(MODE_KEY, mode)
+}
+
+export function getExam(): Exam {
+  if (typeof window === "undefined") return DEFAULT_EXAM
+  const raw = localStorage.getItem(EXAM_KEY)
+  if (!raw) return DEFAULT_EXAM
+  try {
+    return JSON.parse(raw) as Exam
+  } catch {
+    return DEFAULT_EXAM
+  }
+}
+
+export function saveExam(exam: Exam): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(EXAM_KEY, JSON.stringify({ ...exam, updatedAt: Date.now() }))
+  }
+}
+
+export function getExamResults(): ExamResult[] {
+  if (typeof window === "undefined") return []
+  const raw = localStorage.getItem(RESULTS_KEY)
+  if (!raw) return []
+  try {
+    return JSON.parse(raw) as ExamResult[]
+  } catch {
+    return []
+  }
+}
+
+export function saveExamResult(result: ExamResult): void {
+  if (typeof window === "undefined") return
+  const all = getExamResults()
+  all.push(result)
+  localStorage.setItem(RESULTS_KEY, JSON.stringify(all))
+}
+
+export function clearExamResults(): void {
+  if (typeof window !== "undefined") localStorage.removeItem(RESULTS_KEY)
+}
+
+export function getAdminPin(): string {
+  if (typeof window === "undefined") return DEFAULT_ADMIN_PIN
+  return localStorage.getItem(PIN_KEY) ?? DEFAULT_ADMIN_PIN
+}
+
+export function saveAdminPin(pin: string): void {
+  if (typeof window !== "undefined") localStorage.setItem(PIN_KEY, pin)
 }
 
 export function clearProgress(): void {

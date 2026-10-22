@@ -3,16 +3,23 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from "react"
 import { parseCode } from "@/lib/parser"
 import { executeCommands } from "@/lib/executor"
-import { LEVELS, countLines, isAtGoal, isBlocked, lineBudget, starsFor, type Level } from "@/lib/levels"
+import { LEVELS, countLines, isAtGoal, isBlocked, lineBudget, starsFor, type GridPoint, type Level } from "@/lib/levels"
 import {
+  getExam,
+  getExamResults,
   getLevelIndex,
+  getMode,
   getProgress,
   getSoundEnabled,
   recordLevelResult,
+  saveExamResult,
   saveLevelIndex,
+  saveMode,
   saveSoundEnabled,
 } from "@/lib/storage"
 import { play, setMuted } from "@/lib/sfx"
+import type { Mode } from "@/lib/modes"
+import { scoreExam, type Exam, type ExamResult, type ExamTaskResult } from "@/lib/exam"
 import type { ProgressMap } from "@/lib/types"
 
 export interface RobotState {
@@ -21,7 +28,16 @@ export interface RobotState {
   rotation: number
 }
 
+/** What the robot is currently trying to do — keeps the canvas mode-agnostic. */
+export interface RunTarget {
+  goal: GridPoint
+  obstacles?: GridPoint[]
+}
+
 interface RobotContextType {
+  mode: Mode | null
+  chooseMode: (mode: Mode) => void
+  changeMode: () => void
   targetState: RobotState
   commands: string
   isExecuting: boolean
@@ -30,12 +46,16 @@ interface RobotContextType {
   trail: { x: number; y: number }[]
   level: Level
   levelIndex: number
+  runTarget: RunTarget
   won: boolean
   stars: number
   attempts: number
   hintUsed: boolean
   soundOn: boolean
   progress: ProgressMap
+  exam: Exam
+  examTaskIndex: number
+  examResults: ExamTaskResult[]
   selectLevel: (index: number) => void
   nextLevel: () => void
   revealHint: () => void
@@ -45,14 +65,21 @@ interface RobotContextType {
   stopExecution: () => void
   resetRobot: () => void
   clearAll: () => void
+  startExam: (exam: Exam) => void
+  nextExamTask: () => void
+  submitExam: (playerName: string) => ExamResult | null
 }
 
 /** Hint costs the third star, so hints stay honest. */
 const MAX_STARS_WITH_HINT = 2
 
+/** Mod Bebas still needs a visible marker; the robot can roam the whole field. */
+const FREE_TARGET: RunTarget = { goal: { x: 0, y: 0 }, obstacles: [] }
+
 const RobotContext = createContext<RobotContextType | undefined>(undefined)
 
 export function RobotProvider({ children }: { children: React.ReactNode }) {
+  const [mode, setMode] = useState<Mode | null>(null)
   const [commands, setCommands] = useState("")
   const [targetState, setTargetState] = useState<RobotState>({ x: 250, y: 250, rotation: 0 })
   const [isExecuting, setIsExecuting] = useState(false)
@@ -66,15 +93,34 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
   const [hintUsed, setHintUsed] = useState(false)
   const [soundOn, setSoundOn] = useState(true)
   const [progress, setProgress] = useState<ProgressMap>({})
+  const [exam, setExam] = useState<Exam | null>(null)
+  const [examTaskIndex, setExamTaskIndex] = useState(0)
+  const [examResults, setExamResults] = useState<ExamTaskResult[]>([])
 
   const executionRef = useRef<(() => void) | null>(null)
   const targetRef = useRef(targetState)
-  const levelRef = useRef<Level>(LEVELS[0])
+  const modeRef = useRef<Mode | null>(null)
+  const runTargetRef = useRef<RunTarget>(FREE_TARGET)
+  const levelRef = useRef(LEVELS[0])
+  const examRef = useRef<Exam | null>(null)
   const hintRef = useRef(false)
+
+  modeRef.current = mode
+  examRef.current = exam
+  hintRef.current = hintUsed
 
   const level = LEVELS[levelIndex]
   levelRef.current = level
-  hintRef.current = hintUsed
+
+  const examTask = exam ? exam.tasks[examTaskIndex] : undefined
+
+  const runTarget: RunTarget =
+    mode === "ujian" && examTask
+      ? { goal: examTask.goal, obstacles: examTask.obstacles }
+      : mode === "bebas"
+        ? FREE_TARGET
+        : { goal: level.goal, obstacles: level.obstacles }
+  runTargetRef.current = runTarget
 
   const updateCommands = (code: string) => setCommands(code)
 
@@ -105,12 +151,14 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
     setCommands("")
   }, [resetRobot])
 
-  // Browser-only state (progress, last level, sound pref) is read after mount for SSR safety.
+  // Browser-only state is read after mount for SSR safety.
   useEffect(() => {
     const savedSound = getSoundEnabled()
     setSoundOn(savedSound)
     setMuted(!savedSound)
     setProgress(getProgress())
+    setMode(getMode())
+    setExam(getExam())
 
     const savedLevel = getLevelIndex()
     if (savedLevel > 0 && savedLevel < LEVELS.length) {
@@ -118,6 +166,15 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
       setCommands(LEVELS[savedLevel].starter ?? "")
     }
   }, [])
+
+  // Keep one result slot per exam task, whoever started the run.
+  useEffect(() => {
+    if (!exam) return
+    setExamResults((prev) => {
+      if (prev.length === exam.tasks.length) return prev
+      return exam.tasks.map((t) => prev.find((r) => r.taskId === t.id) ?? { taskId: t.id, completed: false })
+    })
+  }, [exam])
 
   const goToLevel = useCallback(
     (index: number) => {
@@ -149,6 +206,61 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
+  const chooseMode = useCallback(
+    (next: Mode) => {
+      setMode(next)
+      saveMode(next)
+      clearAll()
+      if (next === "jelajah") setCommands(LEVELS[levelIndex].starter ?? "")
+      play("click")
+    },
+    [clearAll, levelIndex],
+  )
+
+  const changeMode = useCallback(() => {
+    stopExecution()
+    setMode(null)
+    clearAll()
+  }, [clearAll, stopExecution])
+
+  const startExam = useCallback(
+    (examToRun: Exam) => {
+      setExam(examToRun)
+      setExamTaskIndex(0)
+      setExamResults(examToRun.tasks.map((t) => ({ taskId: t.id, completed: false })))
+      setMode("ujian")
+      saveMode("ujian")
+      clearAll()
+      play("click")
+    },
+    [clearAll],
+  )
+
+  const nextExamTask = useCallback(() => {
+    setExamTaskIndex((i) => Math.min((examRef.current?.tasks.length ?? 1) - 1, i + 1))
+    resetRobot()
+  }, [resetRobot])
+
+  const submitExam = useCallback(
+    (playerName: string): ExamResult | null => {
+      const currentExam = examRef.current
+      if (!currentExam) return null
+
+      const result: ExamResult = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        playerName,
+        examTitle: currentExam.title,
+        timestamp: Date.now(),
+        ...scoreExam(currentExam, examResults),
+      }
+      saveExamResult(result)
+      setMessage(`Keputusan dihantar: ${result.score}/${result.total}`)
+      play("win")
+      return result
+    },
+    [examResults],
+  )
+
   const runCommands = useCallback(() => {
     stopExecution()
 
@@ -158,11 +270,17 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    const budget = lineBudget(levelRef.current)
+    const activeMode = modeRef.current
     const lines = countLines(commands)
-    if (lines > budget) {
-      setMessage(`Arahan terlalu banyak: ${lines}/${budget}. Pendekkan kod anda!`)
-      return
+
+    // Mod Bebas: no goal, no line limit, no score.
+    if (activeMode !== "bebas") {
+      const cap =
+        activeMode === "ujian" && examRef.current ? examRef.current.tasks[examTaskIndex].maxLines : lineBudget(levelRef.current)
+      if (lines > cap) {
+        setMessage(`Arahan terlalu banyak: ${lines}/${cap}. Pendekkan kod anda!`)
+        return
+      }
     }
 
     setWon(false)
@@ -188,8 +306,26 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
         setIsExecuting(false)
         executionRef.current = null
 
-        if (!isAtGoal(targetRef.current, levelRef.current.goal)) {
+        if (modeRef.current === "bebas") {
+          setMessage("Selesai! Robot berhenti di sini.")
+          return
+        }
+
+        const goal = runTargetRef.current.goal
+        if (!isAtGoal(targetRef.current, goal)) {
           setMessage("Belum sampai — cuba lagi!")
+          return
+        }
+
+        if (modeRef.current === "ujian") {
+          const taskIndex = examTaskIndex
+          setExamResults((prev) =>
+            prev.map((r, i) => (i === taskIndex ? { ...r, completed: true, lines } : r)),
+          )
+          setWon(true)
+          setStars(1)
+          setMessage("Tugasan selesai!")
+          play("win")
           return
         }
 
@@ -201,7 +337,7 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
         play("win")
       },
       {
-        isBlocked: (state) => isBlocked(state, levelRef.current.obstacles),
+        isBlocked: (state) => isBlocked(state, runTargetRef.current.obstacles),
         onBlocked: () => {
           setIsExecuting(false)
           executionRef.current = null
@@ -212,11 +348,14 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
     )
 
     executionRef.current = stop
-  }, [commands, stopExecution])
+  }, [commands, stopExecution, examTaskIndex])
 
   return (
     <RobotContext.Provider
       value={{
+        mode,
+        chooseMode,
+        changeMode,
         targetState,
         commands,
         isExecuting,
@@ -225,12 +364,16 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
         trail,
         level,
         levelIndex,
+        runTarget,
         won,
         stars,
         attempts,
         hintUsed,
         soundOn,
         progress,
+        exam: exam ?? getExam(),
+        examTaskIndex,
+        examResults,
         selectLevel,
         nextLevel,
         revealHint,
@@ -240,6 +383,9 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
         stopExecution,
         resetRobot,
         clearAll,
+        startExam,
+        nextExamTask,
+        submitExam,
       }}
     >
       {children}

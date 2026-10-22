@@ -6,6 +6,24 @@ Dibina dengan **Next.js 16**, **React 19**, **Tailwind CSS 4** dan **TypeScript*
 
 🔗 **Live:** https://robo-coder.vercel.app · [![CI](https://github.com/TheGoodFeederX/robo-coder/actions/workflows/ci.yml/badge.svg)](https://github.com/TheGoodFeederX/robo-coder/actions/workflows/ci.yml)
 
+## Tiga mod permainan
+
+| Mod | Keterangan |
+| --- | --- |
+| 🎮 **Bebas** | Apa sahaja arahan, tiada sasaran, tiada had baris, tiada markah. Untuk penerokaan. |
+| 🗺️ **Jelajah** | 12 tahap dengan sasaran, halangan, had arahan, petunjuk dan bintang. |
+| 📝 **Ujian** | Tugasan yang ditetapkan guru (sasaran, halangan, had baris, markah lulus, senarai pemain). Keputusan disimpan & boleh dieksport CSV. |
+
+Pilih mod selepas isi nama; butang **Tukar mod** ada di pengepala.
+
+### Panel Guru (`/admin`)
+
+- Dilindungi PIN mudah (asal `1234`, boleh ditukar). **Bukan kawalan keselamatan sebenar** — data disimpan dalam `localStorage` browser guru sahaja.
+- Tambah/edit/buang tugasan: arahan, sasaran X/Y, had baris, halangan (`x,y; x,y`).
+- Import tugasan dari mana-mana tahap Jelajah.
+- Tetapan ujian: tajuk, markah lulus, senarai pemain dibenarkan.
+- Eksport/import ujian (JSON), keputusan pemain (CSV), padam keputusan.
+
 ## Ciri-ciri
 
 - **Editor kod kanak-kanak** — arahan baris demi baris dengan nombor baris dan highlight baris yang sedang dijalankan.
@@ -65,6 +83,8 @@ components/      RobotCanvas, CodeEditor, LevelPanel, SummaryPage, UI (shadcn)
 lib/parser.ts   Parser arahan → Command[]
 lib/executor.ts Enjin gerakan beranimasi
 lib/levels.ts   Definisi level, halangan, semakan sasaran, penarafan bintang
+lib/modes.ts    Definisi tiga mod
+lib/exam.ts     Model ujian, tugasan, pemarkahan, parser halangan
 lib/sfx.ts      Kesan bunyi Web Audio (tanpa aset)
 lib/storage.ts  Simpanan localStorage (executions, progress, pemain, tahap, bunyi)
 lib/contexts/   RobotContext — state robot, level, dan lifecycle execution

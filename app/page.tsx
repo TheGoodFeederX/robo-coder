@@ -1,11 +1,14 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { RobotCanvas, type RobotCanvasRef } from "@/components/robot-canvas"
 import { CodeEditor } from "@/components/code-editor"
 import { PlayerNameInput } from "@/components/player-name-input"
-import { LevelPanel } from "@/components/level-panel"
 import { SummaryPage } from "@/components/summary-page"
+import { LevelPanel } from "@/components/level-panel"
+import { ModePicker } from "@/components/mode-picker"
+import { ExamPanel, FreePanel } from "@/components/mode-panels"
 import { captureCanvasScreenshot } from "@/lib/canvas-screenshot"
 import {
   saveExecution,
@@ -13,14 +16,18 @@ import {
   clearSavedExecutions,
   clearPlayerName,
   getPlayerName,
+  getMode,
+  getExam,
   savePlayerName,
 } from "@/lib/storage"
 import { useToast } from "@/hooks/use-toast"
 import type { SavedExecution } from "@/lib/types"
-import { Heart } from "lucide-react"
+import type { Mode } from "@/lib/modes"
+import { Heart, LayoutGrid } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { RobotProvider, useRobot } from "@/lib/contexts/robot-context"
 
-type GameState = "name-input" | "playing" | "summary"
+type GameState = "name-input" | "mode-select" | "playing" | "summary"
 
 function PlaygroundContent() {
   const [gameState, setGameState] = useState<GameState>("name-input")
@@ -28,9 +35,9 @@ function PlaygroundContent() {
   const [savedExecutions, setSavedExecutions] = useState<SavedExecution[]>([])
   const robotCanvasRef = useRef<RobotCanvasRef>(null)
   const { toast } = useToast()
+  const router = useRouter()
 
-  // Use values and functions from RobotContext
-  const { commands, clearAll, level, stars, selectLevel } = useRobot()
+  const { commands, clearAll, level, stars, mode, chooseMode, changeMode, startExam, selectLevel } = useRobot()
 
   // Resume the last player automatically so a kid can close the tab and come back.
   useEffect(() => {
@@ -38,15 +45,29 @@ function PlaygroundContent() {
     if (!saved) return
     setPlayerName(saved)
     setSavedExecutions(getSavedExecutions())
-    setGameState("playing")
-  }, [])
+    const savedMode = getMode()
+    if (savedMode === "ujian") startExam(getExam())
+    if (savedMode) setGameState("playing")
+    else setGameState("mode-select")
+  }, [startExam])
 
   const handleStartGame = (name: string) => {
     setPlayerName(name)
     savePlayerName(name)
-    setGameState("playing")
     setSavedExecutions([])
     clearSavedExecutions()
+    setGameState("mode-select")
+  }
+
+  const handleChooseMode = (next: Mode) => {
+    chooseMode(next)
+    if (next === "ujian") startExam(getExam())
+    setGameState("playing")
+  }
+
+  const handleChangeMode = () => {
+    changeMode()
+    setGameState("mode-select")
   }
 
   const handleSave = () => {
@@ -92,6 +113,16 @@ function PlaygroundContent() {
     return <PlayerNameInput onStartGame={handleStartGame} />
   }
 
+  if (gameState === "mode-select") {
+    return (
+      <ModePicker
+        playerName={playerName}
+        onChoose={handleChooseMode}
+        onAdmin={() => router.push("/admin")}
+      />
+    )
+  }
+
   if (gameState === "summary") {
     return <SummaryPage playerName={playerName} savedExecutions={savedExecutions} onBackToStart={handleBackToStart} />
   }
@@ -100,30 +131,37 @@ function PlaygroundContent() {
     <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex flex-col">
       <div className="container mx-auto p-4 flex-1 flex flex-col">
         {/* Header */}
-        <div className="text-center py-6">
-          <h1 className="text-5xl font-bold text-white drop-shadow-lg">🤖 Robo-Coder Playground</h1>
-          <p className="text-xl text-white/90 mt-2">
-            Selamat kembali, {playerName}! Gerakkan robot dengan arahan mudah!
+        <div className="text-center py-4 sm:py-6">
+          <h1 className="text-3xl sm:text-5xl font-bold text-white drop-shadow-lg">🤖 Robo-Coder Playground</h1>
+          <p className="text-base sm:text-xl text-white/90 mt-2">
+            Selamat kembali, {playerName}!{" "}
+            {mode === "bebas"
+              ? "Cuba apa sahaja arahan."
+              : mode === "ujian"
+                ? "Jawab tugasan guru."
+                : "Gerakkan robot ke sasaran."}
           </p>
+          <Button
+            onClick={handleChangeMode}
+            size="sm"
+            variant="outline"
+            className="mt-2 border-2 border-white/60 text-white bg-transparent hover:bg-white/10"
+          >
+            <LayoutGrid className="mr-1 w-4 h-4" /> Tukar mod
+          </Button>
         </div>
 
-        {/* Level Bar */}
+        {/* Mode bar */}
         <div className="pb-4">
-          <LevelPanel />
+          {mode === "jelajah" && <LevelPanel />}
+          {mode === "bebas" && <FreePanel />}
+          {mode === "ujian" && <ExamPanel playerName={playerName} />}
         </div>
 
         {/* Main Content - Split Screen */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 pb-4">
-          {/* Left Panel - Robot Canvas */}
-          <RobotCanvas
-            ref={robotCanvasRef}
-          />
-
-          {/* Right Panel - Code Editor */}
-          <CodeEditor
-            onSave={handleSave}
-            onEndGame={handleEndGame}
-          />
+          <RobotCanvas ref={robotCanvasRef} />
+          <CodeEditor onSave={handleSave} onEndGame={handleEndGame} />
         </div>
       </div>
 

@@ -305,7 +305,8 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
       message,
       currentLine,
       isExecuting,
-      level,
+      runTarget,
+      mode,
     } = useRobot()
 
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -417,11 +418,11 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
         drawBackground(ctx, canvas.width, canvas.height)
       }
 
-      if (level?.obstacles?.length) drawObstacles(ctx, level.obstacles)
-      if (level) drawGoal(ctx, level.goal)
+      if (runTarget.obstacles?.length) drawObstacles(ctx, runTarget.obstacles)
+      if (mode !== "bebas") drawGoal(ctx, runTarget.goal)
       drawTrail(ctx, trail)
       drawRobot(ctx, robotState)
-    }, [robotState, trail, level])
+    }, [robotState, trail, runTarget, mode])
 
     return (
       <Card className="bg-slate-800 border-4 border-white shadow-2xl overflow-hidden flex flex-col">
@@ -435,7 +436,7 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
             width={500}
             height={500}
             role="img"
-            aria-label={`Medan robot. Robot di (${Math.round((robotState.x - 250) / 10)}, ${Math.round((250 - robotState.y) / 10)}). Sasaran (${level?.goal.x ?? 0}, ${level?.goal.y ?? 0}).`}
+            aria-label={`Medan robot. Robot di (${Math.round((robotState.x - 250) / 10)}, ${Math.round((250 - robotState.y) / 10)}). ${mode === "bebas" ? "Mod bebas." : `Sasaran (${runTarget.goal.x}, ${runTarget.goal.y}).`}`}
             className="w-full max-w-[500px] h-auto aspect-square border-4 border-slate-600 rounded-lg shadow-lg cursor-crosshair touch-none"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}

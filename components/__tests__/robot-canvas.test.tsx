@@ -36,6 +36,7 @@ describe('RobotCanvas Motion Logic', () => {
       rotate: vi.fn(),
       ellipse: vi.fn(),
       roundRect: vi.fn(),
+      setLineDash: vi.fn(),
       fillText: vi.fn(),
       drawImage: vi.fn(),
       shadowBlur: 0,
@@ -69,6 +70,7 @@ describe('RobotCanvas Motion Logic', () => {
       message: '',
       currentLine: -1,
       isExecuting: false,
+      runTarget: { goal: { x: 0, y: 5 }, obstacles: [] },
     } as any)
 
     const { rerender } = render(<RobotCanvas />)
@@ -87,6 +89,7 @@ describe('RobotCanvas Motion Logic', () => {
       message: '',
       currentLine: -1,
       isExecuting: true,
+      runTarget: { goal: { x: 0, y: 5 }, obstacles: [] },
     } as any)
 
     act(() => {
@@ -117,6 +120,7 @@ describe('RobotCanvas Motion Logic', () => {
       message: '',
       currentLine: -1,
       isExecuting: false,
+      runTarget: { goal: { x: 0, y: 5 }, obstacles: [] },
     } as any)
 
     const { rerender } = render(<RobotCanvas />)
@@ -133,6 +137,7 @@ describe('RobotCanvas Motion Logic', () => {
       message: '',
       currentLine: -1,
       isExecuting: true,
+      runTarget: { goal: { x: 0, y: 5 }, obstacles: [] },
     } as any)
 
     act(() => {
