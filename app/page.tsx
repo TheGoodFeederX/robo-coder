@@ -129,7 +129,7 @@ function PlaygroundContent() {
 
       <footer className="py-4 text-center text-white/90 text-sm backdrop-blur-sm bg-black/10">
         <p className="flex items-center justify-center gap-2">
-          Dibina dengan <Heart className="w-4 h-4 fill-red-500 text-red-500" /> by Ustaz Najmi | 2025
+          Dibina dengan <Heart className="w-4 h-4 fill-red-500 text-red-500" /> oleh Ustaz Najmi | 2025
         </p>
       </footer>
     </div>
