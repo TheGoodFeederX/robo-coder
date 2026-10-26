@@ -141,7 +141,7 @@ export function ExamPanel({ playerName }: { playerName: string }) {
 
       <div className="flex flex-wrap gap-2">
         {won && !isLast && (
-          <Button size="sm" onClick={nextExamTask} className="bg-green-500 hover:bg-green-600 text-white">
+          <Button size="sm" onClick={nextExamTask} variant="success">
             Tugasan seterusnya <ArrowRight className="ml-1 w-4 h-4" />
           </Button>
         )}

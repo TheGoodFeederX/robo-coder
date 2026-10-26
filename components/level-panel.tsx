@@ -104,7 +104,7 @@ export function LevelPanel() {
       </div>
 
       {won ? (
-        <div className="flex items-center justify-between bg-green-500/20 border-2 border-green-400 rounded-lg px-4 py-2">
+        <div className="flex items-center justify-between bg-green-700/30 border-2 border-green-400 rounded-lg px-4 py-2">
           <p className="text-white font-bold">
             Tahap selesai!{" "}
             {Array.from({ length: stars }, (_, i) => (
