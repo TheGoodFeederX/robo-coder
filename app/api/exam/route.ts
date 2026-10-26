@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { fetchExam, storeExam } from "@/lib/exam-repo"
 import { validateExam, type Exam } from "@/lib/exam"
-import { requireAdmin } from "@/lib/api-auth"
+import { requireTeacher } from "@/lib/auth-session"
 
 export const dynamic = "force-dynamic"
 
@@ -24,7 +24,7 @@ export async function PUT(request: Request) {
   const sql = db()
   if (!sql) return NextResponse.json({ error: "Backend tidak dikonfigurasi." }, { status: 503 })
 
-  const denied = requireAdmin(request)
+  const denied = await requireTeacher()
   if (denied) return denied
 
   let body: unknown

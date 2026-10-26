@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { addResult, clearResults, listResults } from "@/lib/exam-repo"
-import { requireAdmin } from "@/lib/api-auth"
+import { requireTeacher } from "@/lib/auth-session"
 import { scoreExam, type Exam, type ExamTaskResult, type ExamResult } from "@/lib/exam"
 
 export const dynamic = "force-dynamic"
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic"
 export async function GET(request: Request) {
   const sql = db()
   if (!sql) return NextResponse.json({ error: "Backend tidak dikonfigurasi." }, { status: 503 })
-  const denied = requireAdmin(request)
+  const denied = await requireTeacher()
   if (denied) return denied
 
   try {
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   const sql = db()
   if (!sql) return NextResponse.json({ error: "Backend tidak dikonfigurasi." }, { status: 503 })
-  const denied = requireAdmin(request)
+  const denied = await requireTeacher()
   if (denied) return denied
 
   try {

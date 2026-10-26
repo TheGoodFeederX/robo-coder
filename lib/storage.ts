@@ -10,9 +10,6 @@ const SOUND_KEY = "robo-coder-sound"
 const MODE_KEY = "robo-coder-mode"
 const EXAM_KEY = "robo-coder-exam"
 const RESULTS_KEY = "robo-coder-exam-results"
-const PIN_KEY = "robo-coder-admin-pin"
-
-export const DEFAULT_ADMIN_PIN = "1234"
 
 export function getSavedExecutions(): SavedExecution[] {
   if (typeof window === "undefined") return []
@@ -140,15 +137,6 @@ export function saveExamResult(result: ExamResult): void {
 
 export function clearExamResults(): void {
   if (typeof window !== "undefined") localStorage.removeItem(RESULTS_KEY)
-}
-
-export function getAdminPin(): string {
-  if (typeof window === "undefined") return DEFAULT_ADMIN_PIN
-  return localStorage.getItem(PIN_KEY) ?? DEFAULT_ADMIN_PIN
-}
-
-export function saveAdminPin(pin: string): void {
-  if (typeof window !== "undefined") localStorage.setItem(PIN_KEY, pin)
 }
 
 export function clearProgress(): void {

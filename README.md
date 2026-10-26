@@ -62,6 +62,26 @@ loop 3 {
 tp 0,5
 ```
 
+## Pengesahan guru (Better Auth)
+
+Panel Guru guna **Better Auth** dengan penyimpanan Neon Postgres:
+
+- Log masuk emel + kata laluan (`/admin`). Sesi ialah cookie `httpOnly`, sah 7 hari.
+- **Hanya satu akaun guru** boleh dicipta untuk deployment ini (`databaseHooks` menyemak jadual `user`). Cipta akaun pada lawatan pertama, kemudian guna "Log masuk".
+- API admin (`PUT /api/exam`, `GET`/`DELETE /api/results`) memerlukan sesi sah; tiada lagi PIN kongsi.
+- Halaman pemain kekal tanpa akaun — kanak-kanak hanya taip nama. `POST /api/results` terbuka, tetapi markah dikira semula di pelayan.
+
+Persekitaran:
+
+```bash
+BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+BETTER_AUTH_URL=https://robo-coder.vercel.app   # http://localhost:3000 semasa dev
+```
+
+Jadual Better Auth (`user`, `session`, `account`, `verification`) dicipta oleh `pnpm db:migrate` daripada `db/auth-schema.sql`.
+
+Had semasa: tiada pengesahan emel dan tiada pemulihan kata laluan (belum ada pelayan emel). Jika kata laluan hilang, padam baris dalam `user`/`account` melalui psql dan cipta semula.
+
 ## Aksesibiliti & UX (selepas audit)
 
 - Kontras butang ≥ 4.5:1 (hijau/merah/biru/ungu 700); gradien latar digelapkan untuk teks putih.
@@ -83,16 +103,18 @@ Ujian dan keputusan disimpan dalam Postgres (Neon, projek `robo-coder`, region `
 | Laluan | Kaedah | Auth | Fungsi |
 | --- | --- | --- | --- |
 | `/api/exam` | GET | — | Baca ujian aktif |
-| `/api/exam` | PUT | `x-admin-pin` | Simpan ujian (divalidasi `validateExam`) |
+| `/api/auth/[...all]` | GET/POST | — | Better Auth (daftar, log masuk, sesi) |
+| `/api/exam` | PUT | sesi guru | Simpan ujian (divalidasi `validateExam`) |
 | `/api/results` | POST | — | Simpan keputusan pemain (markah dikira semula di pelayan) |
-| `/api/results` | GET | `x-admin-pin` | Senarai keputusan |
-| `/api/results` | DELETE | `x-admin-pin` | Padam semua keputusan |
+| `/api/results` | GET | sesi guru | Senarai keputusan |
+| `/api/results` | DELETE | sesi guru | Padam semua keputusan |
 
 Persekitaran yang diperlukan:
 
 ```bash
 DATABASE_URL=postgresql://...   # Neon pooled connection string
-ADMIN_PIN=1234                  # PIN guru, disemak di pelayan
+BETTER_AUTH_SECRET=...          # kunci tandatangan sesi
+BETTER_AUTH_URL=...             # URL asas app
 ```
 
 Kedua-duanya perlu ada dalam `.env.local` (pembangunan) dan tetapan Environment Variables Vercel (production/preview/development). `.env.local` diabaikan oleh git.
@@ -105,7 +127,7 @@ pnpm db:migrate   # jalankan db/schema.sql
 
 Jadual: `exams` (satu baris `id='default'`, tugasan dalam `jsonb`) dan `exam_results` (satu baris per penyerahan, indeks pada `created_at`).
 
-Nota keselamatan: PIN dihantar sebagai header dan disemak di pelayan, tetapi ia PIN kongsi mudah — bukan pengesahan pengguna sebenar.
+Nota keselamatan: akaun guru dilindungi sesi Better Auth (kata laluan di-hash oleh Better Auth). Tiada pengesahan emel, jadi sesiapa yang tahu emel guru boleh cuba log masuk — gunakan kata laluan kuat.
 
 ## Pembangunan
 
@@ -130,7 +152,9 @@ lib/executor.ts Enjin gerakan beranimasi
 lib/levels.ts   Definisi level, halangan, semakan sasaran, penarafan bintang
 lib/db.ts       Klien Neon + pemetaan baris <-> domain
 lib/exam-repo.ts  Pertanyaan SQL untuk ujian dan keputusan
-lib/api-auth.ts   Semakan PIN guru di pelayan
+lib/auth.ts       Better Auth + hook satu-akaun-guru
+lib/auth-session.ts  Semakan sesi guru untuk API
+lib/auth-client.ts   Klien sesi untuk UI
 lib/api-client.ts Panggilan API dengan fallback setempat
 lib/modes.ts    Definisi tiga mod
 lib/exam.ts     Model ujian, tugasan, pemarkahan, parser halangan

@@ -8,15 +8,22 @@ if (!url) {
   process.exit(1)
 }
 
-const schema = await readFile(new URL("../db/schema.sql", import.meta.url), "utf8")
-const statements = schema
-  .split(";")
-  .map((s) => s.trim())
-  .filter(Boolean)
-
+const files = ["../db/schema.sql", "../db/auth-schema.sql"]
 const sql = neon(url)
-for (const statement of statements) {
-  await sql(statement)
-  console.log("ok:", statement.split("\n")[0].slice(0, 60))
+let total = 0
+
+for (const file of files) {
+  const schema = await readFile(new URL(file, import.meta.url), "utf8")
+  const statements = schema
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean)
+
+  for (const statement of statements) {
+    await sql(statement)
+    total += 1
+  }
+  console.log(`${file}: ${statements.length} statement ok`)
 }
-console.log(`Selesai. ${statements.length} statement dilaksanakan.`)
+
+console.log(`Selesai. ${total} statement dilaksanakan.`)

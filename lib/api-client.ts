@@ -18,17 +18,17 @@ export async function apiGetExam(): Promise<Exam | null> {
   return data?.exam ?? null
 }
 
-export async function apiSaveExam(exam: Exam, pin: string): Promise<Exam | null> {
+export async function apiSaveExam(exam: Exam): Promise<Exam | null> {
   const data = await call<{ exam: Exam }>("/api/exam", {
     method: "PUT",
-    headers: { "content-type": "application/json", "x-admin-pin": pin },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify(exam),
   })
   return data?.exam ?? null
 }
 
-export async function apiListResults(pin: string): Promise<ExamResult[] | null> {
-  const data = await call<{ results: ExamResult[] }>("/api/results", { headers: { "x-admin-pin": pin } })
+export async function apiListResults(): Promise<ExamResult[] | null> {
+  const data = await call<{ results: ExamResult[] }>("/api/results")
   return data?.results ?? null
 }
 
@@ -41,7 +41,17 @@ export async function apiAddResult(playerName: string, exam: Exam, perTask: Exam
   return data?.result ?? null
 }
 
-export async function apiClearResults(pin: string): Promise<number | null> {
-  const data = await call<{ removed: number }>("/api/results", { method: "DELETE", headers: { "x-admin-pin": pin } })
+export async function apiClearResults(): Promise<number | null> {
+  const data = await call<{ removed: number }>("/api/results", { method: "DELETE" })
   return data?.removed ?? null
+}
+
+/** 503 means DATABASE_URL is missing, so the UI can say "mod setempat". */
+export async function apiBackendAvailable(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/exam", { cache: "no-store" })
+    return res.status !== 503
+  } catch {
+    return false
+  }
 }

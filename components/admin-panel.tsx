@@ -4,132 +4,195 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import {
-  DEFAULT_ADMIN_PIN,
-  clearExamResults,
-  getAdminPin,
-  getExam,
-  getExamResults,
-  saveAdminPin,
-  saveExam,
-} from "@/lib/storage"
+import { clearExamResults, getExam, getExamResults, saveExam } from "@/lib/storage"
 import { DEFAULT_EXAM, formatObstacles, parseObstacleList, validateExam, type Exam, type ExamResult, type ExamTask } from "@/lib/exam"
 import { LEVELS } from "@/lib/levels"
-import { ArrowLeft, Download, Lock, Plus, Save, Trash2 } from "lucide-react"
+import { ArrowLeft, Download, Lock, LogOut, Plus, Save, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { apiClearResults, apiGetExam, apiListResults, apiSaveExam } from "@/lib/api-client"
+import { Label } from "@/components/ui/label"
+import { signIn, signOut, signUp, useSession } from "@/lib/auth-client"
+import { validateTeacherCredentials } from "@/lib/auth-rules"
+import { apiBackendAvailable, apiClearResults, apiGetExam, apiListResults, apiSaveExam } from "@/lib/api-client"
 
 function emptyTask(index: number): ExamTask {
   return { id: `t${index}-${Math.random().toString(36).slice(2, 6)}`, prompt: "", goal: { x: 0, y: 0 }, maxLines: 5 }
 }
 
+function TeacherAuth() {
+  const [mode, setMode] = useState<"masuk" | "daftar">("masuk")
+  const [name, setName] = useState("Guru")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [busy, setBusy] = useState(false)
+
+  const submit = async () => {
+    setError("")
+    const problem = validateTeacherCredentials(email, password)
+    if (problem) {
+      setError(problem)
+      return
+    }
+
+    setBusy(true)
+    const result =
+      mode === "masuk"
+        ? await signIn.email({ email: email.trim(), password })
+        : await signUp.email({ email: email.trim(), password, name: name.trim() || "Guru" })
+    setBusy(false)
+
+    if (result.error) {
+      setError(result.error.message ?? "Gagal log masuk.")
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <Card className="bg-slate-800 border-4 border-white p-8 w-full max-w-md flex flex-col gap-3">
+        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <Lock className="w-5 h-5" aria-hidden="true" /> Panel Guru
+        </h1>
+        <p className="text-white/70 text-sm">
+          {mode === "masuk"
+            ? "Log masuk dengan akaun guru."
+            : "Cipta akaun guru pertama. Hanya satu akaun dibenarkan untuk deployment ini."}
+        </p>
+
+        {mode === "daftar" && (
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="teacher-name" className="text-white/80">
+              Nama
+            </Label>
+            <Input
+              id="teacher-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
+              className="border-2 border-slate-500 bg-slate-900 text-white"
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="teacher-email" className="text-white/80">
+            Emel
+          </Label>
+          <Input
+            id="teacher-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            aria-invalid={Boolean(error)}
+            aria-describedby="auth-error"
+            className="border-2 border-slate-500 bg-slate-900 text-white"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="teacher-password" className="text-white/80">
+            Kata laluan (min 8 aksara)
+          </Label>
+          <Input
+            id="teacher-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submit()
+            }}
+            autoComplete={mode === "masuk" ? "current-password" : "new-password"}
+            aria-invalid={Boolean(error)}
+            aria-describedby="auth-error"
+            className="border-2 border-slate-500 bg-slate-900 text-white"
+          />
+        </div>
+
+        {error && (
+          <p id="auth-error" role="alert" className="text-red-300 text-sm font-bold">
+            {error}
+          </p>
+        )}
+
+        <div className="flex gap-2">
+          <Button onClick={() => void submit()} disabled={busy} variant="warning" className="flex-1">
+            {busy ? "Memproses…" : mode === "masuk" ? "Masuk" : "Cipta akaun"}
+          </Button>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center gap-1 rounded-md border-2 border-white/60 px-4 h-11 text-white text-sm hover:bg-white/10"
+          >
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Permainan
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setError("")
+            setMode(mode === "masuk" ? "daftar" : "masuk")
+          }}
+          className="text-white/70 text-sm underline underline-offset-2 hover:text-white self-start"
+        >
+          {mode === "masuk" ? "Belum ada akaun guru? Cipta akaun" : "Sudah ada akaun? Log masuk"}
+        </button>
+      </Card>
+    </div>
+  )
+}
+
 export function AdminPanel() {
-  const [unlocked, setUnlocked] = useState(false)
-  const [pin, setPin] = useState("")
-  const [pinError, setPinError] = useState("")
-  const [adminPin, setAdminPin] = useState("")
-  const [remote, setRemote] = useState(false)
+  const { data: session, isPending } = useSession()
   const [exam, setExam] = useState<Exam>(DEFAULT_EXAM)
   const [saved, setSaved] = useState("")
   const [obstacleText, setObstacleText] = useState<Record<string, string>>({})
   const [resultsVersion, setResultsVersion] = useState(0)
   const [sortBy, setSortBy] = useState<"time" | "score" | "name">("time")
-  const [newPin, setNewPin] = useState("")
-
-  useEffect(() => {
-    setExam(getExam())
-  }, [])
-
-  // Prefer the Neon copy; fall back to the browser copy when the API is unavailable.
-  const loadFromServer = async (candidatePin: string) => {
-    const examFromServer = await apiGetExam()
-    if (!examFromServer) return false
-    setExam(examFromServer)
-    setRemote(true)
-    return true
-  }
-
-  const unlock = async () => {
-    const results = await apiListResults(pin)
-    if (results) {
-      setAdminPin(pin)
-      setUnlocked(true)
-      setRemote(true)
-      await loadFromServer(pin)
-      setResultsVersion((v) => v + 1)
-      return
-    }
-
-    // 503/offline: keep working locally, but only for the locally stored PIN.
-    if (pin === getAdminPin()) {
-      setAdminPin(pin)
-      setUnlocked(true)
-      setRemote(false)
-      return
-    }
-    setPinError("PIN salah.")
-  }
-
-  if (!unlocked) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <Card className="bg-slate-800 border-4 border-white p-8 w-full max-w-md flex flex-col gap-3">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Lock className="w-5 h-5" /> Panel Guru
-          </h1>
-          <p className="text-white/70 text-sm">
-            Masukkan PIN untuk mengurus ujian.
-            {getAdminPin() === DEFAULT_ADMIN_PIN
-              ? " PIN lalai masih digunakan — tukar selepas masuk."
-              : " PIN lalai sudah ditukar."}
-          </p>
-          <Input
-            type="password"
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void unlock()
-            }}
-            className="border-2 border-slate-500 bg-slate-900 text-white"
-            aria-label="PIN guru"
-            autoFocus
-          />
-          {pinError && <p className="text-red-400 text-sm">{pinError}</p>}
-          <div className="flex gap-2">
-            <Button
-              onClick={() => void unlock()}
-              variant="warning"
-              className="flex-1"
-            >
-              Masuk
-            </Button>
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center gap-1 rounded-md border-2 border-white/60 px-4 h-11 text-white text-sm hover:bg-white/10"
-            >
-              <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Permainan
-            </Link>
-          </div>
-        </Card>
-      </div>
-    )
-  }
-
   const [serverResults, setServerResults] = useState<ExamResult[] | null>(null)
+  const [remote, setRemote] = useState(false)
+
+  const signedIn = Boolean(session?.user)
+
+  // Load the exam once signed in: Neon copy first, browser copy as fallback.
   useEffect(() => {
-    if (!unlocked) return
+    if (!signedIn) return
+    setExam(getExam())
     let cancelled = false
-    apiListResults(adminPin).then((list) => {
+    void (async () => {
+      const available = await apiBackendAvailable()
+      if (!available || cancelled) return
+      const fromServer = await apiGetExam()
+      if (cancelled) return
+      setRemote(true)
+      if (fromServer) setExam(fromServer)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [signedIn])
+
+  useEffect(() => {
+    if (!signedIn) return
+    let cancelled = false
+    void apiListResults().then((list) => {
       if (!cancelled && list) setServerResults(list)
     })
     return () => {
       cancelled = true
     }
-  }, [unlocked, adminPin, resultsVersion])
+  }, [signedIn, resultsVersion])
 
-  const localResults = getExamResults()
-  void resultsVersion
-  const results = serverResults ?? (remote ? [] : localResults)
+  if (isPending) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <p className="text-white/80">Menyemak sesi…</p>
+      </div>
+    )
+  }
+
+  if (!signedIn) return <TeacherAuth />
+
+  const results = serverResults ?? (remote ? [] : getExamResults())
 
   const sortedResults = [...results].sort((a, b) => {
     if (sortBy === "score") return b.score - a.score || a.playerName.localeCompare(b.playerName)
@@ -185,6 +248,15 @@ export function AdminPanel() {
     }))
   }
 
+  const download = (content: string, filename: string, type: string) => {
+    const url = URL.createObjectURL(new Blob([content], { type }))
+    const link = document.createElement("a")
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   const exportCsv = () => {
     const rows = [
       ["pemain", "ujian", "markah", "jumlah", "lulus", "masa"],
@@ -198,22 +270,10 @@ export function AdminPanel() {
       ]),
     ]
     const csv = rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\n")
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }))
-    const link = document.createElement("a")
-    link.href = url
-    link.download = "keputusan-ujian.csv"
-    link.click()
-    URL.revokeObjectURL(url)
+    download(csv, "keputusan-ujian.csv", "text/csv;charset=utf-8")
   }
 
-  const exportJson = () => {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(exam, null, 2)], { type: "application/json" }))
-    const link = document.createElement("a")
-    link.href = url
-    link.download = "ujian.json"
-    link.click()
-    URL.revokeObjectURL(url)
-  }
+  const exportJson = () => download(JSON.stringify(exam, null, 2), "ujian.json", "application/json")
 
   const importJson = (file: File) => {
     file
@@ -235,38 +295,47 @@ export function AdminPanel() {
     <div className="min-h-screen bg-slate-900 text-white p-4">
       <div className="container mx-auto max-w-4xl flex flex-col gap-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h1 className="text-2xl font-bold">🧑‍🏫 Panel Guru — Mod Ujian</h1>
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-bold">🧑‍🏫 Panel Guru — Mod Ujian</h1>
+            <p className="text-white/70 text-xs">
+              {session?.user?.email} · {remote ? "Neon Postgres" : "salinan setempat"}
+            </p>
+          </div>
           <div className="flex items-center gap-2">
-            <p className="text-white/70 text-xs">Tetapan disimpan dalam browser ini sahaja (tidak dimuat naik).</p>
             <Link
               href="/"
               className="inline-flex items-center gap-1 rounded-md border-2 border-white/60 px-3 h-11 text-white text-sm hover:bg-white/10"
             >
               <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Kembali ke permainan
             </Link>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await signOut()
+                window.location.reload()
+              }}
+            >
+              <LogOut className="mr-1 w-4 h-4" aria-hidden="true" /> Keluar
+            </Button>
           </div>
         </div>
-
-        {getAdminPin() === DEFAULT_ADMIN_PIN && (
-          <p role="status" className="rounded-lg border-2 border-amber-400 bg-amber-900/40 px-3 py-2 text-sm text-amber-100">
-            PIN lalai masih digunakan. Tukar di bahagian bawah supaya murid tidak boleh masuk.
-          </p>
-        )}
 
         <Card className="bg-slate-800 border-2 border-slate-600 p-4 flex flex-col gap-3">
           <h2 className="font-bold">Tetapan ujian</h2>
           <div className="grid sm:grid-cols-3 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              Tajuk ujian
+            <div className="flex flex-col gap-1 text-sm">
+              <Label htmlFor="exam-title">Tajuk ujian</Label>
               <Input
+                id="exam-title"
                 value={exam.title}
                 onChange={(e) => setExam({ ...exam, title: e.target.value })}
                 className="border-2 border-slate-500 bg-slate-900 text-white"
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Markah lulus (bilangan tugasan)
+            </div>
+            <div className="flex flex-col gap-1 text-sm">
+              <Label htmlFor="exam-pass">Markah lulus (bilangan tugasan)</Label>
               <Input
+                id="exam-pass"
                 type="number"
                 min={0}
                 max={exam.tasks.length}
@@ -274,10 +343,11 @@ export function AdminPanel() {
                 onChange={(e) => setExam({ ...exam, passMark: Number(e.target.value) })}
                 className="border-2 border-slate-500 bg-slate-900 text-white"
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              Pemain dibenarkan (pisah dengan koma; kosong = semua)
+            </div>
+            <div className="flex flex-col gap-1 text-sm">
+              <Label htmlFor="exam-players">Pemain dibenarkan (pisah dengan koma; kosong = semua)</Label>
               <Input
+                id="exam-players"
                 value={exam.players.join(", ")}
                 onChange={(e) =>
                   setExam({
@@ -290,7 +360,7 @@ export function AdminPanel() {
                 }
                 className="border-2 border-slate-500 bg-slate-900 text-white"
               />
-            </label>
+            </div>
           </div>
         </Card>
 
@@ -303,7 +373,7 @@ export function AdminPanel() {
                   if (e.target.value) loadLevelTemplate(e.target.value)
                   e.target.value = ""
                 }}
-                className="border-2 border-slate-500 bg-slate-900 rounded-md px-2 py-1 text-sm"
+                className="border-2 border-slate-500 bg-slate-900 rounded-md px-2 py-2 text-sm"
                 aria-label="Tambah dari tahap jelajah"
                 defaultValue=""
               >
@@ -318,9 +388,8 @@ export function AdminPanel() {
                 size="sm"
                 variant="outline"
                 onClick={() => setExam({ ...exam, tasks: [...exam.tasks, emptyTask(exam.tasks.length + 1)] })}
-                className="border-2 border-white/40 bg-transparent text-white"
               >
-                <Plus className="mr-1 w-4 h-4" /> Tugasan kosong
+                <Plus className="mr-1 w-4 h-4" aria-hidden="true" /> Tugasan kosong
               </Button>
             </div>
           </div>
@@ -333,58 +402,62 @@ export function AdminPanel() {
                   size="sm"
                   variant="outline"
                   onClick={() => setExam({ ...exam, tasks: exam.tasks.filter((_, j) => j !== i) })}
-                  className="border-2 border-red-400/60 bg-transparent text-red-300"
+                  className="border-red-400/60 text-red-300"
                   aria-label={`Buang tugasan ${i + 1}`}
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4" aria-hidden="true" />
                 </Button>
               </div>
               <Input
                 value={task.prompt}
                 onChange={(e) => updateTask(i, { prompt: e.target.value })}
                 placeholder="Arahan untuk pemain"
-                className="border-2 border-slate-500 bg-slate-900 rounded-md px-2 py-1 text-sm"
                 aria-label={`Arahan tugasan ${i + 1}`}
+                className="border-2 border-slate-500 bg-slate-900 text-white"
               />
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-                <label className="flex flex-col gap-1">
-                  Sasaran X
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor={`goal-x-${task.id}`}>Sasaran X</Label>
                   <Input
+                    id={`goal-x-${task.id}`}
                     type="number"
                     value={task.goal.x}
                     onChange={(e) => updateTask(i, { goal: { ...task.goal, x: Number(e.target.value) } })}
                     className="border-2 border-slate-500 bg-slate-900 text-white"
                   />
-                </label>
-                <label className="flex flex-col gap-1">
-                  Sasaran Y
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor={`goal-y-${task.id}`}>Sasaran Y</Label>
                   <Input
+                    id={`goal-y-${task.id}`}
                     type="number"
                     value={task.goal.y}
                     onChange={(e) => updateTask(i, { goal: { ...task.goal, y: Number(e.target.value) } })}
                     className="border-2 border-slate-500 bg-slate-900 text-white"
                   />
-                </label>
-                <label className="flex flex-col gap-1">
-                  Had baris
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor={`max-lines-${task.id}`}>Had baris</Label>
                   <Input
+                    id={`max-lines-${task.id}`}
                     type="number"
                     min={1}
                     value={task.maxLines}
                     onChange={(e) => updateTask(i, { maxLines: Number(e.target.value) })}
                     className="border-2 border-slate-500 bg-slate-900 text-white"
                   />
-                </label>
-                <label className="flex flex-col gap-1">
-                  Halangan (x,y; x,y)
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor={`obstacles-${task.id}`}>Halangan (x,y; x,y)</Label>
                   <Input
+                    id={`obstacles-${task.id}`}
                     aria-label={`Halangan tugasan ${i + 1}`}
                     value={obstacleText[task.id] ?? formatObstacles(task.obstacles)}
                     onChange={(e) => setObstacleText({ ...obstacleText, [task.id]: e.target.value })}
                     onBlur={() => applyObstacles(i, task.id)}
                     className="border-2 border-slate-500 bg-slate-900 text-white"
                   />
-                </label>
+                </div>
               </div>
             </div>
           ))}
@@ -395,18 +468,18 @@ export function AdminPanel() {
             <Button
               onClick={async () => {
                 saveExam(exam)
-                const stored = await apiSaveExam(exam, adminPin)
+                const stored = await apiSaveExam(exam)
                 setRemote(Boolean(stored))
-                setSaved(stored ? "Ujian disimpan ke pangkalan data Neon." : "Ujian disimpan dalam browser sahaja.")
+                setSaved(stored ? "Ujian disimpan ke Neon Postgres." : "Ujian disimpan dalam browser sahaja.")
               }}
-              className="bg-purple-500 hover:bg-purple-600 text-white font-bold"
+              variant="warning"
             >
-              <Save className="mr-1 w-4 h-4" /> Simpan ujian
+              <Save className="mr-1 w-4 h-4" aria-hidden="true" /> Simpan ujian
             </Button>
-            <Button onClick={exportJson} variant="outline" className="border-2 border-white/40 bg-transparent text-white">
-              <Download className="mr-1 w-4 h-4" /> Eksport JSON
+            <Button onClick={exportJson} variant="outline">
+              <Download className="mr-1 w-4 h-4" aria-hidden="true" /> Eksport JSON
             </Button>
-            <label className="border-2 border-white/40 rounded-md px-3 py-2 text-sm cursor-pointer">
+            <label className="border-2 border-white/40 rounded-md px-3 h-11 inline-flex items-center text-sm cursor-pointer">
               Import JSON
               <input
                 type="file"
@@ -421,11 +494,14 @@ export function AdminPanel() {
                 setSaved("Ditetapkan semula kepada ujian contoh (belum disimpan).")
               }}
               variant="outline"
-              className="border-2 border-white/40 bg-transparent text-white"
             >
               Set semula contoh
             </Button>
-            {saved && <span className="text-green-300 text-sm">{saved}</span>}
+            {saved && (
+              <span role="status" className="text-green-300 text-sm">
+                {saved}
+              </span>
+            )}
           </div>
         </Card>
 
@@ -433,31 +509,25 @@ export function AdminPanel() {
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h2 className="font-bold">Keputusan ({results.length})</h2>
             <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={exportCsv}
-                disabled={!results.length}
-                variant="outline"
-                className="border-2 border-white/40 bg-transparent text-white"
-              >
-                <Download className="mr-1 w-4 h-4" /> Eksport CSV
+              <Button onClick={exportCsv} disabled={!results.length} variant="outline">
+                <Download className="mr-1 w-4 h-4" aria-hidden="true" /> Eksport CSV
               </Button>
               <Button
                 onClick={async () => {
                   clearExamResults()
-                  await apiClearResults(adminPin)
+                  await apiClearResults()
                   setServerResults([])
                   setResultsVersion((v) => v + 1)
                 }}
                 disabled={!results.length}
-                variant="outline"
-                className="border-2 border-red-400/60 bg-transparent text-red-300"
+                variant="danger"
               >
-                <Trash2 className="mr-1 w-4 h-4" /> Padam semua
+                <Trash2 className="mr-1 w-4 h-4" aria-hidden="true" /> Padam semua
               </Button>
             </div>
           </div>
           {results.length === 0 ? (
-            <p className="text-white/60 text-sm">Belum ada keputusan.</p>
+            <p className="text-white/70 text-sm">Belum ada keputusan.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -486,39 +556,6 @@ export function AdminPanel() {
               </table>
             </div>
           )}
-        </Card>
-
-        <Card className="bg-slate-800 border-2 border-slate-600 p-4 flex flex-col gap-2">
-          <h2 className="font-bold">PIN guru</h2>
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="flex flex-col gap-1 text-sm">
-              PIN baru
-              <input
-                type="password"
-                value={newPin}
-                onChange={(e) => setNewPin(e.target.value)}
-                className="border-2 border-slate-500 bg-slate-900 text-white"
-              />
-            </label>
-            <Button
-              onClick={() => {
-                if (newPin.trim().length < 4) {
-                  setSaved("PIN mesti sekurang-kurangnya 4 aksara.")
-                  return
-                }
-                saveAdminPin(newPin.trim())
-                setNewPin("")
-                setSaved("PIN dikemas kini.")
-              }}
-              variant="outline"
-              className="border-2 border-white/40 bg-transparent text-white"
-            >
-              Tukar PIN
-            </Button>
-          </div>
-          <p className="text-white/50 text-xs">
-            Amaran: PIN dan data ujian disimpan dalam localStorage browser ini sahaja — bukan kawalan keselamatan sebenar.
-          </p>
         </Card>
       </div>
     </div>
