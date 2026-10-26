@@ -62,6 +62,20 @@ loop 3 {
 tp 0,5
 ```
 
+## Aksesibiliti & UX (selepas audit)
+
+- Kontras butang ≥ 4.5:1 (hijau/merah/biru/ungu 700); gradien latar digelapkan untuk teks putih.
+- Fokus papan kekunci: cincin kuning 4px pada semua butang; bekas editor guna `focus-within`.
+- Sasaran sentuh ≥ 44px; editor dengan chip arahan boleh ketuk dan Tab tidak melompat keluar.
+- Mesej parser/executor dalam Bahasa Melayu; baris bermasalah ditanda merah dalam gutter.
+- `prefers-reduced-motion` dihormati; kawasan `role="status"` sentiasa wujud (bukan bersyarat).
+- Font Fredoka + Geist Mono dimuatkan melalui `next/font`.
+- Kanvas HiDPI (`devicePixelRatio`), label paksi diskalakan, label sasaran pada kanvas, legenda ringkas.
+- Butang Kembali pelayar berfungsi (history API), pautan terus `/?mod=jelajah&tahap=3`.
+- Dialog pengesahan sebelum padam rekod; had kuota localStorage menyimpan rekod terbaharu.
+- Sedikit tersasar sengaja: tiada sintaks penuh/penyerlahan baris dalam editor (hanya gutter),
+  tiada komponen `Select` baharu untuk satu medan, token `.dark` sedia ada belum dipakai.
+
 ## Pembangunan
 
 ```bash
