@@ -23,7 +23,17 @@ export function getSavedExecutions(): SavedExecution[] {
 export function saveExecution(execution: SavedExecution): void {
   const executions = getSavedExecutions()
   executions.push(execution)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(executions))
+
+  // Screenshots are data URLs and localStorage is ~5MB, so drop the oldest
+  // records until the write fits instead of losing the newest one.
+  while (executions.length > 0) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(executions))
+      return
+    } catch {
+      executions.shift()
+    }
+  }
 }
 
 export function clearSavedExecutions(): void {

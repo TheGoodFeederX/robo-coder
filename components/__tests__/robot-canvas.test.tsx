@@ -37,6 +37,7 @@ describe('RobotCanvas Motion Logic', () => {
       ellipse: vi.fn(),
       roundRect: vi.fn(),
       setLineDash: vi.fn(),
+      setTransform: vi.fn(),
       fillText: vi.fn(),
       drawImage: vi.fn(),
       shadowBlur: 0,

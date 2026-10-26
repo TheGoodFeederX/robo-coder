@@ -14,7 +14,7 @@ export function FreePanel() {
   return (
     <Card className="bg-slate-800 border-4 border-white shadow-2xl p-4 flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-white font-bold">🎮 Mod Bebas</h3>
+        <h3 className="text-white font-bold"><span aria-hidden="true">🎮</span> Mod Bebas</h3>
         <div className="flex items-center gap-2">
           <span className="text-white/60 text-xs">Arahan: {lines} (tiada had)</span>
           <Button
@@ -95,7 +95,7 @@ export function ExamPanel({ playerName }: { playerName: string }) {
     <Card className="bg-slate-800 border-4 border-white shadow-2xl p-4 flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <h3 className="text-white font-bold">
-          📝 {exam.title} — Tugasan {examTaskIndex + 1}/{tasks.length}
+          <span aria-hidden="true">📝</span> {exam.title} — Tugasan {examTaskIndex + 1}/{tasks.length}
         </h3>
         <div className="flex items-center gap-2">
           <span className="text-white/60 text-xs">Selesai: {done}/{tasks.length}</span>

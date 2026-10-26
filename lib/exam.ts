@@ -54,6 +54,31 @@ export const DEFAULT_EXAM: Exam = {
   updatedAt: 0,
 }
 
+/** Validates an imported exam file. Returns a human-readable error or null. */
+export function validateExam(raw: unknown): string | null {
+  if (typeof raw !== "object" || raw === null) return "Fail mesti objek JSON."
+  const exam = raw as Partial<Exam>
+  if (typeof exam.title !== "string" || !exam.title.trim()) return "Tajuk ujian tiada."
+  if (!Array.isArray(exam.tasks) || exam.tasks.length === 0) return "Ujian mesti ada sekurang-kurangnya satu tugasan."
+
+  for (const [i, task] of exam.tasks.entries()) {
+    const where = `Tugasan ${i + 1}`
+    if (!task || typeof task !== "object") return `${where}: format salah.`
+    if (typeof task.prompt !== "string") return `${where}: "prompt" tiada.`
+    if (!task.goal || typeof task.goal.x !== "number" || typeof task.goal.y !== "number") {
+      return `${where}: sasaran (goal x/y) tiada atau bukan nombor.`
+    }
+    if (typeof task.maxLines !== "number" || task.maxLines < 1) return `${where}: had baris mesti ≥ 1.`
+    if (task.obstacles && !Array.isArray(task.obstacles)) return `${where}: "obstacles" mesti senarai.`
+    if (typeof task.id !== "string" || !task.id) return `${where}: "id" tiada.`
+  }
+
+  if (typeof exam.passMark !== "number" || exam.passMark < 0) return "Markah lulus mesti nombor ≥ 0."
+  if (exam.passMark > exam.tasks.length) return "Markah lulus melebihi bilangan tugasan."
+  if (exam.players && !Array.isArray(exam.players)) return "Senarai pemain mesti array."
+  return null
+}
+
 export function scoreExam(
   exam: Exam,
   perTask: ExamTaskResult[],

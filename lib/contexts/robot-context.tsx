@@ -42,6 +42,7 @@ interface RobotContextType {
   commands: string
   isExecuting: boolean
   currentLine: number
+  errorLines: number[]
   message: string
   trail: { x: number; y: number }[]
   level: Level
@@ -84,6 +85,7 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
   const [targetState, setTargetState] = useState<RobotState>({ x: 250, y: 250, rotation: 0 })
   const [isExecuting, setIsExecuting] = useState(false)
   const [currentLine, setCurrentLine] = useState(-1)
+  const [errorLines, setErrorLines] = useState<number[]>([])
   const [message, setMessage] = useState("")
   const [trail, setTrail] = useState<{ x: number; y: number }[]>([{ x: 250, y: 250 }])
   const [levelIndex, setLevelIndex] = useState(0)
@@ -122,7 +124,10 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
         : { goal: level.goal, obstacles: level.obstacles }
   runTargetRef.current = runTarget
 
-  const updateCommands = (code: string) => setCommands(code)
+  const updateCommands = (code: string) => {
+    setCommands(code)
+    if (errorLines.length) setErrorLines([])
+  }
 
   const stopExecution = useCallback(() => {
     if (executionRef.current) {
@@ -266,9 +271,11 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
 
     const parsed = parseCode(commands)
     if (parsed.errors.length > 0) {
+      setErrorLines(parsed.errorLines)
       setMessage(`Ralat: ${parsed.errors[0]}`)
       return
     }
+    setErrorLines([])
 
     const activeMode = modeRef.current
     const lines = countLines(commands)
@@ -360,6 +367,7 @@ export function RobotProvider({ children }: { children: React.ReactNode }) {
         commands,
         isExecuting,
         currentLine,
+        errorLines,
         message,
         trail,
         level,

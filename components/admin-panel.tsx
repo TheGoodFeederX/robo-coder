@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,9 +13,10 @@ import {
   saveAdminPin,
   saveExam,
 } from "@/lib/storage"
-import { DEFAULT_EXAM, formatObstacles, parseObstacleList, type Exam, type ExamTask } from "@/lib/exam"
+import { DEFAULT_EXAM, formatObstacles, parseObstacleList, validateExam, type Exam, type ExamTask } from "@/lib/exam"
 import { LEVELS } from "@/lib/levels"
-import { Download, Lock, Plus, Save, Trash2 } from "lucide-react"
+import { ArrowLeft, Download, Lock, Plus, Save, Trash2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
 
 function emptyTask(index: number): ExamTask {
   return { id: `t${index}-${Math.random().toString(36).slice(2, 6)}`, prompt: "", goal: { x: 0, y: 0 }, maxLines: 5 }
@@ -28,6 +30,7 @@ export function AdminPanel() {
   const [saved, setSaved] = useState("")
   const [obstacleText, setObstacleText] = useState<Record<string, string>>({})
   const [resultsVersion, setResultsVersion] = useState(0)
+  const [sortBy, setSortBy] = useState<"time" | "score" | "name">("time")
   const [newPin, setNewPin] = useState("")
 
   useEffect(() => {
@@ -41,8 +44,13 @@ export function AdminPanel() {
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Lock className="w-5 h-5" /> Panel Guru
           </h1>
-          <p className="text-white/70 text-sm">Masukkan PIN untuk mengurus ujian. PIN asal: {DEFAULT_ADMIN_PIN}</p>
-          <input
+          <p className="text-white/70 text-sm">
+            Masukkan PIN untuk mengurus ujian.
+            {getAdminPin() === DEFAULT_ADMIN_PIN
+              ? " PIN lalai masih digunakan — tukar selepas masuk."
+              : " PIN lalai sudah ditukar."}
+          </p>
+          <Input
             type="password"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
@@ -51,17 +59,26 @@ export function AdminPanel() {
               if (pin === getAdminPin()) setUnlocked(true)
               else setPinError("PIN salah.")
             }}
-            className="border-2 border-slate-500 bg-slate-900 text-white rounded-md px-3 py-2"
+            className="border-2 border-slate-500 bg-slate-900 text-white"
             aria-label="PIN guru"
             autoFocus
           />
           {pinError && <p className="text-red-400 text-sm">{pinError}</p>}
-          <Button
-            onClick={() => (pin === getAdminPin() ? setUnlocked(true) : setPinError("PIN salah."))}
-            className="bg-purple-500 hover:bg-purple-600 text-white font-bold"
-          >
-            Masuk
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => (pin === getAdminPin() ? setUnlocked(true) : setPinError("PIN salah."))}
+              variant="warning"
+              className="flex-1"
+            >
+              Masuk
+            </Button>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center gap-1 rounded-md border-2 border-white/60 px-4 h-11 text-white text-sm hover:bg-white/10"
+            >
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Permainan
+            </Link>
+          </div>
         </Card>
       </div>
     )
@@ -69,6 +86,25 @@ export function AdminPanel() {
 
   const results = getExamResults()
   void resultsVersion
+
+  const sortedResults = [...results].sort((a, b) => {
+    if (sortBy === "score") return b.score - a.score || a.playerName.localeCompare(b.playerName)
+    if (sortBy === "name") return (a.playerName || "").localeCompare(b.playerName || "")
+    return b.timestamp - a.timestamp
+  })
+
+  const sortHeader = (key: "time" | "score" | "name", label: string) => (
+    <th scope="col" aria-sort={sortBy === key ? "descending" : "none"} className="py-1">
+      <button
+        type="button"
+        onClick={() => setSortBy(key)}
+        className="inline-flex items-center gap-1 underline-offset-2 hover:underline focus-visible:ring-4 focus-visible:ring-yellow-300/70 rounded"
+      >
+        {label}
+        {sortBy === key ? <span aria-hidden="true">↓</span> : null}
+      </button>
+    </th>
+  )
 
   const updateTask = (index: number, patch: Partial<ExamTask>) => {
     setExam((prev) => ({
@@ -140,11 +176,15 @@ export function AdminPanel() {
       .text()
       .then((text) => {
         const parsed = JSON.parse(text) as Exam
-        if (!Array.isArray(parsed.tasks)) throw new Error("fail tidak sah")
+        const problem = validateExam(parsed)
+        if (problem) {
+          setSaved(`Import gagal: ${problem}`)
+          return
+        }
         setExam(parsed)
-        setSaved("Fail dimuatkan. Tekan Simpan Ujian untuk kekalkan.")
+        setSaved(`Fail dimuatkan: ${parsed.tasks.length} tugasan. Tekan Simpan ujian untuk kekalkan.`)
       })
-      .catch(() => setSaved("Gagal baca fail JSON."))
+      .catch(() => setSaved("Import gagal: bukan fail JSON yang sah."))
   }
 
   return (
@@ -152,36 +192,48 @@ export function AdminPanel() {
       <div className="container mx-auto max-w-4xl flex flex-col gap-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h1 className="text-2xl font-bold">🧑‍🏫 Panel Guru — Mod Ujian</h1>
-          <p className="text-white/60 text-xs">
-            Tetapan disimpan dalam browser ini sahaja (tidak dimuat naik).
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-white/70 text-xs">Tetapan disimpan dalam browser ini sahaja (tidak dimuat naik).</p>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 rounded-md border-2 border-white/60 px-3 h-11 text-white text-sm hover:bg-white/10"
+            >
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Kembali ke permainan
+            </Link>
+          </div>
         </div>
+
+        {getAdminPin() === DEFAULT_ADMIN_PIN && (
+          <p role="status" className="rounded-lg border-2 border-amber-400 bg-amber-900/40 px-3 py-2 text-sm text-amber-100">
+            PIN lalai masih digunakan. Tukar di bahagian bawah supaya murid tidak boleh masuk.
+          </p>
+        )}
 
         <Card className="bg-slate-800 border-2 border-slate-600 p-4 flex flex-col gap-3">
           <h2 className="font-bold">Tetapan ujian</h2>
           <div className="grid sm:grid-cols-3 gap-3">
             <label className="flex flex-col gap-1 text-sm">
               Tajuk ujian
-              <input
+              <Input
                 value={exam.title}
                 onChange={(e) => setExam({ ...exam, title: e.target.value })}
-                className="border-2 border-slate-500 bg-slate-900 rounded-md px-2 py-1"
+                className="border-2 border-slate-500 bg-slate-900 text-white"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
               Markah lulus (bilangan tugasan)
-              <input
+              <Input
                 type="number"
                 min={0}
                 max={exam.tasks.length}
                 value={exam.passMark}
                 onChange={(e) => setExam({ ...exam, passMark: Number(e.target.value) })}
-                className="border-2 border-slate-500 bg-slate-900 rounded-md px-2 py-1"
+                className="border-2 border-slate-500 bg-slate-900 text-white"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
               Pemain dibenarkan (pisah dengan koma; kosong = semua)
-              <input
+              <Input
                 value={exam.players.join(", ")}
                 onChange={(e) =>
                   setExam({
@@ -192,7 +244,7 @@ export function AdminPanel() {
                       .filter(Boolean),
                   })
                 }
-                className="border-2 border-slate-500 bg-slate-900 rounded-md px-2 py-1"
+                className="border-2 border-slate-500 bg-slate-900 text-white"
               />
             </label>
           </div>
@@ -243,7 +295,7 @@ export function AdminPanel() {
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
-              <input
+              <Input
                 value={task.prompt}
                 onChange={(e) => updateTask(i, { prompt: e.target.value })}
                 placeholder="Arahan untuk pemain"
@@ -253,39 +305,40 @@ export function AdminPanel() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
                 <label className="flex flex-col gap-1">
                   Sasaran X
-                  <input
+                  <Input
                     type="number"
                     value={task.goal.x}
                     onChange={(e) => updateTask(i, { goal: { ...task.goal, x: Number(e.target.value) } })}
-                    className="border-2 border-slate-500 bg-slate-900 rounded-md px-2 py-1"
+                    className="border-2 border-slate-500 bg-slate-900 text-white"
                   />
                 </label>
                 <label className="flex flex-col gap-1">
                   Sasaran Y
-                  <input
+                  <Input
                     type="number"
                     value={task.goal.y}
                     onChange={(e) => updateTask(i, { goal: { ...task.goal, y: Number(e.target.value) } })}
-                    className="border-2 border-slate-500 bg-slate-900 rounded-md px-2 py-1"
+                    className="border-2 border-slate-500 bg-slate-900 text-white"
                   />
                 </label>
                 <label className="flex flex-col gap-1">
                   Had baris
-                  <input
+                  <Input
                     type="number"
                     min={1}
                     value={task.maxLines}
                     onChange={(e) => updateTask(i, { maxLines: Number(e.target.value) })}
-                    className="border-2 border-slate-500 bg-slate-900 rounded-md px-2 py-1"
+                    className="border-2 border-slate-500 bg-slate-900 text-white"
                   />
                 </label>
                 <label className="flex flex-col gap-1">
                   Halangan (x,y; x,y)
-                  <input
+                  <Input
+                    aria-label={`Halangan tugasan ${i + 1}`}
                     value={obstacleText[task.id] ?? formatObstacles(task.obstacles)}
                     onChange={(e) => setObstacleText({ ...obstacleText, [task.id]: e.target.value })}
                     onBlur={() => applyObstacles(i, task.id)}
-                    className="border-2 border-slate-500 bg-slate-900 rounded-md px-2 py-1"
+                    className="border-2 border-slate-500 bg-slate-900 text-white"
                   />
                 </label>
               </div>
@@ -360,16 +413,16 @@ export function AdminPanel() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-white/60 text-left">
+                <thead className="text-white/80 text-left">
                   <tr>
-                    <th className="py-1">Pemain</th>
-                    <th>Markah</th>
-                    <th>Status</th>
-                    <th>Masa</th>
+                    {sortHeader("name", "Pemain")}
+                    {sortHeader("score", "Markah")}
+                    <th scope="col">Status</th>
+                    {sortHeader("time", "Masa")}
                   </tr>
                 </thead>
                 <tbody>
-                  {results.map((r) => (
+                  {sortedResults.map((r) => (
                     <tr key={r.id} className="border-t border-slate-700">
                       <td className="py-1">{r.playerName || "(tanpa nama)"}</td>
                       <td>
@@ -396,7 +449,7 @@ export function AdminPanel() {
                 type="password"
                 value={newPin}
                 onChange={(e) => setNewPin(e.target.value)}
-                className="border-2 border-slate-500 bg-slate-900 rounded-md px-2 py-1"
+                className="border-2 border-slate-500 bg-slate-900 text-white"
               />
             </label>
             <Button

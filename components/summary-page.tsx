@@ -3,24 +3,25 @@
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import type { SavedExecution } from "@/lib/types"
-import { Home, Printer, Heart } from "lucide-react"
+import { ArrowLeft, Home, Printer, Heart } from "lucide-react"
 
 interface SummaryPageProps {
   playerName: string
   savedExecutions: SavedExecution[]
   onBackToStart: () => void
+  onContinue: () => void
 }
 
-export function SummaryPage({ playerName, savedExecutions, onBackToStart }: SummaryPageProps) {
+export function SummaryPage({ playerName, savedExecutions, onBackToStart, onContinue }: SummaryPageProps) {
   const handleCetak = () => {
     window.print()
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-purple-700 via-fuchsia-700 to-rose-600 flex flex-col">
       <div className="container mx-auto p-4 flex-1">
         <div className="text-center py-6 mb-4 no-print">
-          <h1 className="text-5xl font-bold text-white drop-shadow-lg">🏆 Ringkasan Permainan</h1>
+          <h1 className="text-5xl font-bold text-white drop-shadow-lg"><span aria-hidden="true">🏆</span> Ringkasan Permainan</h1>
           <p className="text-2xl text-white/90 mt-2">Syabas, {playerName}!</p>
           <p className="text-lg text-white/80 mt-1">
             Anda simpan {savedExecutions.length} rekod
@@ -39,7 +40,7 @@ export function SummaryPage({ playerName, savedExecutions, onBackToStart }: Summ
             <p className="text-xl text-slate-600 mb-6">Belum ada rekod disimpan!</p>
             <Button
               onClick={onBackToStart}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-lg font-bold"
+              variant="warning" className="text-lg font-bold"
             >
               <Home className="mr-2 h-5 w-5" />
               Mula Permainan Baru
@@ -54,7 +55,7 @@ export function SummaryPage({ playerName, savedExecutions, onBackToStart }: Summ
                     <div>
                       <h3 className="text-2xl font-bold text-purple-600 mb-2">Rekod #{index + 1}</h3>
                       {execution.stars ? (
-                        <p className="text-yellow-500 text-xl" title={`${execution.stars} stars`}>
+                        <p className="text-amber-300 text-xl" aria-label={`${execution.stars} bintang`} title={`${execution.stars} bintang`}>
                           {"★".repeat(execution.stars)}
                         </p>
                       ) : null}
@@ -73,8 +74,11 @@ export function SummaryPage({ playerName, savedExecutions, onBackToStart }: Summ
                     <h4 className="text-lg font-semibold text-slate-700 mb-2">Jejak Robot:</h4>
                     <img
                       src={execution.screenshot || "/placeholder.svg"}
-                      alt={`Execution ${index + 1} screenshot`}
-                      className="w-full border-4 border-slate-300 rounded-lg shadow-lg"
+                      alt={`Jejak robot untuk rekod ${index + 1}`}
+                      width={500}
+                      height={500}
+                      loading="lazy"
+                      className="w-full h-auto border-2 border-slate-300 rounded-lg shadow-lg"
                     />
                   </div>
                 </div>
@@ -82,16 +86,20 @@ export function SummaryPage({ playerName, savedExecutions, onBackToStart }: Summ
             ))}
 
             <div className="text-center pt-4 no-print flex flex-wrap gap-4 justify-center pb-4">
+              <Button onClick={onContinue} variant="success" className="text-xl font-bold px-8 shadow-lg">
+                <ArrowLeft className="mr-2 h-6 w-6" aria-hidden="true" />
+                Teruskan bermain
+              </Button>
               <Button
                 onClick={handleCetak}
-                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-xl font-bold h-14 px-8 shadow-lg"
+                variant="info" className="text-xl font-bold px-8 shadow-lg"
               >
                 <Printer className="mr-2 h-6 w-6" />
                 Cetak
               </Button>
               <Button
                 onClick={onBackToStart}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-xl font-bold h-14 px-8 shadow-lg"
+                variant="warning" className="text-xl font-bold px-8 shadow-lg"
               >
                 <Home className="mr-2 h-6 w-6" />
                 Mula Permainan Baru

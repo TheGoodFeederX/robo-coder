@@ -12,7 +12,7 @@ interface RobotState {
   rotation: number
 }
 
-const drawBackground = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+const drawBackground = (ctx: CanvasRenderingContext2D, width: number, height: number, labelSize = 12) => {
   const gradient = ctx.createLinearGradient(0, 0, 0, height)
   gradient.addColorStop(0, "#1a1f35")
   gradient.addColorStop(1, "#2d3748")
@@ -311,6 +311,8 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
 
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const bgCanvasRef = useRef<HTMLCanvasElement | null>(null)
+    const [dpr, setDpr] = useState(1)
+    const [displayWidth, setDisplayWidth] = useState(500)
     const [robotState, setRobotState] = useState<RobotState>({
       x: 250,
       y: 250,
@@ -324,19 +326,41 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
       getCanvas: () => canvasRef.current,
     }))
 
-    // Initialize background canvas once
+    // Retina/HiDPI: render at devicePixelRatio but keep 500x500 logical coordinates.
     useEffect(() => {
-      if (!bgCanvasRef.current) {
-        const bgCanvas = document.createElement("canvas")
-        bgCanvas.width = 500
-        bgCanvas.height = 500
-        const bgCtx = bgCanvas.getContext("2d")
-        if (bgCtx) {
-          drawBackground(bgCtx, 500, 500)
-        }
-        bgCanvasRef.current = bgCanvas
+      const ratio = Math.min(window.devicePixelRatio || 1, 3)
+      setDpr(ratio)
+
+      const canvas = canvasRef.current
+      if (canvas) {
+        canvas.width = 500 * ratio
+        canvas.height = 500 * ratio
       }
+
+      // ResizeObserver is missing in some test environments (jsdom).
+      if (!canvas || typeof ResizeObserver === "undefined") return
+      const observe = new ResizeObserver((entries) => {
+        const width = entries[0]?.contentRect.width
+        if (width) setDisplayWidth(width)
+      })
+      observe.observe(canvas)
+      return () => observe.disconnect()
     }, [])
+
+    // Static background is cached (drawn once per dpr/scale change).
+    useEffect(() => {
+      const bgCanvas = document.createElement("canvas")
+      bgCanvas.width = 500 * dpr
+      bgCanvas.height = 500 * dpr
+      const bgCtx = bgCanvas.getContext("2d")
+      if (bgCtx) {
+        bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        // Axis labels shrink on small screens; keep them legible (~11px minimum).
+        const labelSize = displayWidth < 380 ? 18 : 12
+        drawBackground(bgCtx, 500, 500, labelSize)
+      }
+      bgCanvasRef.current = bgCanvas
+    }, [dpr, displayWidth])
 
     // Snap to target state when not executing (handles reset/clear)
     useEffect(() => {
@@ -412,22 +436,24 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
       const ctx = canvas?.getContext("2d")
       if (!canvas || !ctx) return
 
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
       if (bgCanvasRef.current) {
         ctx.drawImage(bgCanvasRef.current, 0, 0)
-      } else {
-        drawBackground(ctx, canvas.width, canvas.height)
       }
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
       if (runTarget.obstacles?.length) drawObstacles(ctx, runTarget.obstacles)
       if (mode !== "bebas") drawGoal(ctx, runTarget.goal)
       drawTrail(ctx, trail)
       drawRobot(ctx, robotState)
-    }, [robotState, trail, runTarget, mode])
+    }, [robotState, trail, runTarget, mode, dpr])
 
     return (
       <Card className="bg-slate-800 border-4 border-white shadow-2xl overflow-hidden flex flex-col">
-        <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-4">
-          <h2 className="text-2xl font-bold text-white text-center">Medan Misi Robot</h2>
+        <div className="bg-sky-700 p-3 sm:p-4">
+          <h2 className="text-xl sm:text-2xl font-bold text-white text-center">Medan Misi Robot</h2>
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center p-3 sm:p-6 relative">
@@ -437,7 +463,7 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
             height={500}
             role="img"
             aria-label={`Medan robot. Robot di (${Math.round((robotState.x - 250) / 10)}, ${Math.round((250 - robotState.y) / 10)}). ${mode === "bebas" ? "Mod bebas." : `Sasaran (${runTarget.goal.x}, ${runTarget.goal.y}).`}`}
-            className="w-full max-w-[500px] h-auto aspect-square border-4 border-slate-600 rounded-lg shadow-lg cursor-crosshair touch-none"
+            className="w-full max-w-[500px] h-auto aspect-square border-4 border-slate-600 rounded-lg shadow-lg cursor-crosshair [touch-action:pan-y]"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
           />
@@ -450,15 +476,21 @@ export const RobotCanvas = forwardRef<RobotCanvasRef, {}>(
             </div>
           )}
 
-          {message && (
-            <div
-              role="status"
-              aria-live="polite"
-              className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white rounded-full px-6 py-3 shadow-lg animate-bounce max-w-[90%]"
-            >
-              <p className="text-base sm:text-lg font-bold text-slate-800">{message}</p>
-            </div>
-          )}
+          <div
+            role="status"
+            aria-live="polite"
+            className="pointer-events-none absolute bottom-4 inset-x-4 flex justify-center"
+          >
+            {message && (
+              <p className="pointer-events-auto max-w-full rounded-full bg-white px-5 py-2 text-base sm:text-lg font-bold text-slate-900 shadow-lg animate-in fade-in slide-in-from-bottom-2">
+                {message}
+              </p>
+            )}
+          </div>
+
+          <p className="pt-2 text-xs text-white/80 text-center">
+            <span aria-hidden="true">⭐</span> sasaran · <span aria-hidden="true">🧱</span> halangan · garisan ungu = jejak robot
+          </p>
 
           {currentLine >= 0 && (
             <div className="absolute top-8 right-8 bg-yellow-400 rounded-lg px-4 py-2 shadow-lg">

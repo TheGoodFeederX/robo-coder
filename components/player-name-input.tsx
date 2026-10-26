@@ -24,11 +24,11 @@ export function PlayerNameInput({ onStartGame }: PlayerNameInputProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-purple-700 via-fuchsia-700 to-rose-600 flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
         <Card className="bg-white p-8 max-w-md w-full shadow-2xl">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-purple-600 mb-2">🤖 Robo-Coder Playground</h1>
+            <h1 className="text-4xl font-bold text-purple-700 mb-2"><span aria-hidden="true">🤖</span> Robo-Coder Playground</h1>
             <p className="text-lg text-slate-600">Selamat datang, coder muda!</p>
           </div>
 
@@ -40,13 +40,16 @@ export function PlayerNameInput({ onStartGame }: PlayerNameInputProps) {
               <Input
                 id="playerName"
                 type="text"
+                maxLength={30}
+                autoComplete="off"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Masukkan nama anda"
                 className="text-lg h-12 border-2 border-purple-300 focus:border-purple-500"
-                autoFocus
               />
             </div>
+
+            <p className="text-sm text-slate-500">Isi nama (maksimum 30 aksara) untuk mula.</p>
 
             <Button
               type="submit"

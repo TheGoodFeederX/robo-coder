@@ -36,28 +36,27 @@ export function LevelPanel() {
           Tahap {levelIndex + 1}/{LEVELS.length}: {level.title}
         </h3>
         <div className="flex items-center gap-2">
-          <span className="text-yellow-300 text-sm">
-            🏆 {cleared}/{LEVELS.length} selesai
+          <span className="text-amber-300 text-sm">
+            <span aria-hidden="true">🏆</span> {cleared}/{LEVELS.length} selesai
           </span>
           <Button
-            size="sm"
+            size="icon"
             variant="outline"
             onClick={toggleSound}
             aria-label={soundOn ? "Matikan bunyi" : "Hidupkan bunyi"}
-            className="border-2 border-white/40 text-white/80 bg-transparent hover:bg-white/10 h-8 px-2"
           >
-            {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            {soundOn ? <Volume2 className="w-5 h-5" aria-hidden="true" /> : <VolumeX className="w-5 h-5" aria-hidden="true" />}
           </Button>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-        <span className={`font-bold ${overBudget ? "text-red-400" : "text-white/70"}`}>
+        <span className={`font-bold text-sm ${overBudget ? "text-red-300" : "text-white/80"}`}>
           Arahan: {used} / {budget}
           {overBudget ? " — terlalu banyak, pendekkan kod!" : ""}
         </span>
-        <span className="text-white/60">Percubaan: {attempts}</span>
-        {level.obstacles?.length ? <span className="text-red-300">🧱 {level.obstacles.length} halangan</span> : null}
+        <span className="text-white/80 text-sm">Percubaan: {attempts}</span>
+        {level.obstacles?.length ? <span className="text-red-300 text-sm"><span aria-hidden="true">🧱</span> {level.obstacles.length} halangan</span> : null}
       </div>
 
       {hintUsed ? (
@@ -93,7 +92,13 @@ export function LevelPanel() {
             } bg-transparent hover:bg-white/10`}
           >
             {i + 1}
-            <span className="ml-1 text-xs">{"★".repeat(progress[lvl.id]?.stars ?? 0) || "·"}</span>
+            <span className="ml-1 text-xs" aria-hidden="true">
+              {"★".repeat(progress[lvl.id]?.stars ?? 0) || "·"}
+            </span>
+            <span className="sr-only">
+              {progress[lvl.id] ? `selesai, ${progress[lvl.id].stars} bintang` : "belum selesai"}
+              {i === levelIndex ? ", tahap semasa" : ""}
+            </span>
           </Button>
         ))}
       </div>
@@ -110,14 +115,14 @@ export function LevelPanel() {
             onClick={nextLevel}
             disabled={isLast}
             size="sm"
-            className="bg-green-500 hover:bg-green-600 text-white"
+            variant="success"
           >
             {isLast ? "Habis" : "Seterusnya"}
             {!isLast && <ArrowRight className="ml-1 w-4 h-4" />}
           </Button>
         </div>
       ) : (
-        <p className="text-white/60 text-xs">
+        <p className="text-white/80 text-sm">
           Par: {level.par} baris untuk ★★★ · terbaik anda:{" "}
           {progress[level.id] ? `${progress[level.id].bestLines} baris` : "—"}
         </p>

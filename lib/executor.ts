@@ -35,10 +35,10 @@ export function executeCommands(
 
       if (cmd.type === "tp" && cmd.coordinates) {
         const { x, y } = cmd.coordinates
-        setMessage(`Teleporting to (${x}, ${y})!`)
+        setMessage(`Teleport ke (${x}, ${y})`)
 
         if (options.isBlocked?.({ x: 250 + x * 10, y: 250 - y * 10, rotation: 0 })) {
-          setMessage(`Crash! (${x}, ${y}) is blocked.`)
+          setMessage(`Robot terlanggar halangan di (${x}, ${y})!`)
           stopped = true
           options.onBlocked?.()
           return
@@ -60,7 +60,7 @@ export function executeCommands(
         })
       } else if (cmd.type === "step") {
         const totalSteps = cmd.value as number
-        setMessage(`Moving ${totalSteps} steps forward!`)
+        setMessage(`Robot bergerak ${totalSteps} langkah ke hadapan`)
 
         for (let step = 0; step < totalSteps; step++) {
           if (stopped) return
@@ -77,7 +77,7 @@ export function executeCommands(
           ...prev,
           rotation: prev.rotation + (direction === "left" ? -90 : 90),
         }))
-        setMessage(`Turning ${direction}!`)
+        setMessage(`Pusing ${direction === "left" ? "kiri" : "kanan"}`)
         options.onEvent?.("turn")
       } else if (cmd.type === "rotate") {
         const degrees = cmd.value as number
@@ -85,12 +85,12 @@ export function executeCommands(
           ...prev,
           rotation: prev.rotation + degrees,
         }))
-        setMessage(`Rotating ${degrees} degrees!`)
+        setMessage(`Pusing ${degrees} darjah`)
       } else if (cmd.type === "loop" && cmd.body) {
         const times = cmd.value as number
         for (let j = 0; j < times; j++) {
           if (stopped) return
-          setMessage(`Loop ${j + 1} of ${times}`)
+          setMessage(`Ulangan ${j + 1} / ${times}`)
           await execute(cmd.body)
           if (stopped) return
           await sleep(300)
@@ -121,7 +121,7 @@ export function executeCommands(
     })
 
     if (blocked) {
-      setMessage("Crash! Robot hit a wall. Try another path.")
+      setMessage("Robot terlanggar dinding. Cuba laluan lain.")
       stopped = true
       options.onBlocked?.()
       return false

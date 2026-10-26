@@ -9,12 +9,15 @@ export interface Command {
 export interface ParseResult {
   commands: Command[]
   errors: string[]
+  /** 0-based lines that failed to parse, for editor highlighting. */
+  errorLines: number[]
 }
 
 export function parseCode(code: string): ParseResult {
   const lines = code.split("\n").map((line) => line.trim())
   const commands: Command[] = []
   const errors: string[] = []
+  const errorLines: number[] = []
   const functions: Map<string, Command[]> = new Map()
 
   let index = 0
@@ -50,7 +53,7 @@ export function parseCode(code: string): ParseResult {
             lineNumber,
           })
         } else {
-          errors.push(`Line ${lineNumber + 1}: Invalid tp command. Use 'tp x,y' (e.g., tp 5,10)`)
+          errorLines.push(lineNumber); errors.push(`Baris ${lineNumber + 1}: Arahan tp tidak betul. Cuba: tp 5,10`)
         }
         index++
         continue
@@ -66,7 +69,7 @@ export function parseCode(code: string): ParseResult {
             lineNumber,
           })
         } else {
-          errors.push(`Line ${lineNumber + 1}: Invalid step command`)
+          errorLines.push(lineNumber); errors.push(`Baris ${lineNumber + 1}: Arahan step tidak betul. Cuba: step 3`)
         }
         index++
         continue
@@ -82,7 +85,7 @@ export function parseCode(code: string): ParseResult {
             lineNumber,
           })
         } else {
-          errors.push(`Line ${lineNumber + 1}: Invalid turn command. Use 'turn left' or 'turn right'`)
+          errorLines.push(lineNumber); errors.push(`Baris ${lineNumber + 1}: Arahan turn tidak betul. Cuba: turn left atau turn right`)
         }
         index++
         continue
@@ -98,7 +101,7 @@ export function parseCode(code: string): ParseResult {
             lineNumber,
           })
         } else {
-          errors.push(`Line ${lineNumber + 1}: Invalid rotate command`)
+          errorLines.push(lineNumber); errors.push(`Baris ${lineNumber + 1}: Arahan rotate tidak betul. Cuba: rotate 90`)
         }
         index++
         continue
@@ -117,7 +120,7 @@ export function parseCode(code: string): ParseResult {
             lineNumber,
           })
         } else {
-          errors.push(`Line ${lineNumber + 1}: Invalid loop syntax. Use 'loop <number> {'`)
+          errorLines.push(lineNumber); errors.push(`Baris ${lineNumber + 1}: Sintaks loop salah. Cuba: loop 3 {`)
           index++
         }
         continue
@@ -132,7 +135,7 @@ export function parseCode(code: string): ParseResult {
           const funcBody = parseBlock()
           functions.set(funcId, funcBody)
         } else {
-          errors.push(`Line ${lineNumber + 1}: Invalid function syntax. Use 'function <id> {'`)
+          errorLines.push(lineNumber); errors.push(`Baris ${lineNumber + 1}: Sintaks function salah. Cuba: function lompat {`)
           index++
         }
         continue
@@ -148,7 +151,7 @@ export function parseCode(code: string): ParseResult {
             lineNumber,
           })
         } else {
-          errors.push(`Line ${lineNumber + 1}: Invalid function call. Use 'start function <id>'`)
+          errorLines.push(lineNumber); errors.push(`Baris ${lineNumber + 1}: Panggilan fungsi salah. Cuba: start function lompat`)
         }
         index++
         continue
@@ -162,7 +165,7 @@ export function parseCode(code: string): ParseResult {
 
       // Unknown command
       if (line) {
-        errors.push(`Line ${lineNumber + 1}: Unknown command '${line}'`)
+        errorLines.push(lineNumber); errors.push(`Baris ${lineNumber + 1}: Arahan tidak dikenali: '${line}'`)
       }
       index++
     }
@@ -182,7 +185,8 @@ export function parseCode(code: string): ParseResult {
         if (funcBody) {
           expanded.push(...expandCommands(funcBody))
         } else {
-          errors.push(`Line ${cmd.lineNumber + 1}: Function '${cmd.value}' is not defined`)
+          errorLines.push(cmd.lineNumber)
+          errors.push(`Baris ${cmd.lineNumber + 1}: Fungsi '${cmd.value}' belum ditakrifkan`)
         }
       } else if (cmd.type === "loop" && cmd.body) {
         expanded.push({
@@ -202,5 +206,6 @@ export function parseCode(code: string): ParseResult {
   return {
     commands: expandedCommands,
     errors,
+    errorLines: Array.from(new Set(errorLines)).sort((a, b) => a - b),
   }
 }
