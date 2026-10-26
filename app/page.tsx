@@ -11,6 +11,7 @@ import { ModePicker } from "@/components/mode-picker"
 import { ExamPanel, FreePanel } from "@/components/mode-panels"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { captureCanvasScreenshot } from "@/lib/canvas-screenshot"
+import { apiGetExam } from "@/lib/api-client"
 import {
   saveExecution,
   getSavedExecutions,
@@ -56,6 +57,9 @@ function PlaygroundContent() {
 
   const { commands, clearAll, level, levelIndex, stars, mode, chooseMode, changeMode, startExam, selectLevel } = useRobot()
 
+  // Exam lives in Neon when the backend is configured, otherwise in this browser.
+  const loadExam = useCallback(async () => (await apiGetExam()) ?? getExam(), [])
+
   const goTo = useCallback(
     (next: Screen, urlMode: Mode | null, levelNumber?: number) => {
       window.history.pushState(
@@ -78,14 +82,14 @@ function PlaygroundContent() {
       }
       if (state.screen === "play" && state.mode) {
         chooseMode(state.mode)
-        if (state.mode === "ujian") startExam(getExam())
+        if (state.mode === "ujian") void loadExam().then((exam) => startExam(exam))
         if (state.mode === "jelajah" && state.level) selectLevel(state.level - 1)
       }
       setScreen(state.screen)
     }
     window.addEventListener("popstate", onPop)
     return () => window.removeEventListener("popstate", onPop)
-  }, [chooseMode, selectLevel, startExam])
+  }, [chooseMode, selectLevel, startExam, loadExam])
 
   // Deep links: /?mod=jelajah&tahap=3 so a teacher can send a direct link.
   useEffect(() => {
@@ -96,12 +100,12 @@ function PlaygroundContent() {
     setPlayerName(getPlayerName() || "Tetamu")
     setSavedExecutions(getSavedExecutions())
     chooseMode(urlMode)
-    if (urlMode === "ujian") startExam(getExam())
+    if (urlMode === "ujian") void loadExam().then((exam) => startExam(exam))
     const levelNumber = Number(params.get("tahap") ?? "0")
     if (urlMode === "jelajah" && levelNumber > 0) selectLevel(levelNumber - 1)
     window.history.replaceState({ screen: "play", mode: urlMode, level: levelNumber }, "", window.location.search)
     setScreen("play")
-  }, [chooseMode, selectLevel, startExam])
+  }, [chooseMode, selectLevel, startExam, loadExam])
 
   // Resume the last player automatically so a kid can close the tab and come back.
   useEffect(() => {
@@ -111,12 +115,12 @@ function PlaygroundContent() {
     setPlayerName(saved)
     setSavedExecutions(getSavedExecutions())
     const savedMode = getMode()
-    if (savedMode === "ujian") startExam(getExam())
+    if (savedMode === "ujian") void loadExam().then((exam) => startExam(exam))
     setScreen(savedMode ? "play" : "mode")
     if (savedMode) {
       window.history.replaceState({ screen: "play", mode: savedMode }, "", urlFor({ screen: "play", mode: savedMode }))
     }
-  }, [startExam])
+  }, [startExam, loadExam])
 
   const handleStartGame = (name: string) => {
     savePlayerName(name)
@@ -125,9 +129,9 @@ function PlaygroundContent() {
     goTo("mode", null)
   }
 
-  const handleChooseMode = (next: Mode) => {
+  const handleChooseMode = async (next: Mode) => {
     chooseMode(next)
-    if (next === "ujian") startExam(getExam())
+    if (next === "ujian") startExam(await loadExam())
     setMobileTab("field")
     goTo("play", next, 1)
   }

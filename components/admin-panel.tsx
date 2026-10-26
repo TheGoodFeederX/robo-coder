@@ -13,10 +13,11 @@ import {
   saveAdminPin,
   saveExam,
 } from "@/lib/storage"
-import { DEFAULT_EXAM, formatObstacles, parseObstacleList, validateExam, type Exam, type ExamTask } from "@/lib/exam"
+import { DEFAULT_EXAM, formatObstacles, parseObstacleList, validateExam, type Exam, type ExamResult, type ExamTask } from "@/lib/exam"
 import { LEVELS } from "@/lib/levels"
 import { ArrowLeft, Download, Lock, Plus, Save, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { apiClearResults, apiGetExam, apiListResults, apiSaveExam } from "@/lib/api-client"
 
 function emptyTask(index: number): ExamTask {
   return { id: `t${index}-${Math.random().toString(36).slice(2, 6)}`, prompt: "", goal: { x: 0, y: 0 }, maxLines: 5 }
@@ -26,6 +27,8 @@ export function AdminPanel() {
   const [unlocked, setUnlocked] = useState(false)
   const [pin, setPin] = useState("")
   const [pinError, setPinError] = useState("")
+  const [adminPin, setAdminPin] = useState("")
+  const [remote, setRemote] = useState(false)
   const [exam, setExam] = useState<Exam>(DEFAULT_EXAM)
   const [saved, setSaved] = useState("")
   const [obstacleText, setObstacleText] = useState<Record<string, string>>({})
@@ -36,6 +39,36 @@ export function AdminPanel() {
   useEffect(() => {
     setExam(getExam())
   }, [])
+
+  // Prefer the Neon copy; fall back to the browser copy when the API is unavailable.
+  const loadFromServer = async (candidatePin: string) => {
+    const examFromServer = await apiGetExam()
+    if (!examFromServer) return false
+    setExam(examFromServer)
+    setRemote(true)
+    return true
+  }
+
+  const unlock = async () => {
+    const results = await apiListResults(pin)
+    if (results) {
+      setAdminPin(pin)
+      setUnlocked(true)
+      setRemote(true)
+      await loadFromServer(pin)
+      setResultsVersion((v) => v + 1)
+      return
+    }
+
+    // 503/offline: keep working locally, but only for the locally stored PIN.
+    if (pin === getAdminPin()) {
+      setAdminPin(pin)
+      setUnlocked(true)
+      setRemote(false)
+      return
+    }
+    setPinError("PIN salah.")
+  }
 
   if (!unlocked) {
     return (
@@ -55,9 +88,7 @@ export function AdminPanel() {
             value={pin}
             onChange={(e) => setPin(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key !== "Enter") return
-              if (pin === getAdminPin()) setUnlocked(true)
-              else setPinError("PIN salah.")
+              if (e.key === "Enter") void unlock()
             }}
             className="border-2 border-slate-500 bg-slate-900 text-white"
             aria-label="PIN guru"
@@ -66,7 +97,7 @@ export function AdminPanel() {
           {pinError && <p className="text-red-400 text-sm">{pinError}</p>}
           <div className="flex gap-2">
             <Button
-              onClick={() => (pin === getAdminPin() ? setUnlocked(true) : setPinError("PIN salah."))}
+              onClick={() => void unlock()}
               variant="warning"
               className="flex-1"
             >
@@ -84,8 +115,21 @@ export function AdminPanel() {
     )
   }
 
-  const results = getExamResults()
+  const [serverResults, setServerResults] = useState<ExamResult[] | null>(null)
+  useEffect(() => {
+    if (!unlocked) return
+    let cancelled = false
+    apiListResults(adminPin).then((list) => {
+      if (!cancelled && list) setServerResults(list)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [unlocked, adminPin, resultsVersion])
+
+  const localResults = getExamResults()
   void resultsVersion
+  const results = serverResults ?? (remote ? [] : localResults)
 
   const sortedResults = [...results].sort((a, b) => {
     if (sortBy === "score") return b.score - a.score || a.playerName.localeCompare(b.playerName)
@@ -349,9 +393,11 @@ export function AdminPanel() {
         <Card className="bg-slate-800 border-2 border-slate-600 p-4 flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              onClick={() => {
+              onClick={async () => {
                 saveExam(exam)
-                setSaved("Ujian disimpan.")
+                const stored = await apiSaveExam(exam, adminPin)
+                setRemote(Boolean(stored))
+                setSaved(stored ? "Ujian disimpan ke pangkalan data Neon." : "Ujian disimpan dalam browser sahaja.")
               }}
               className="bg-purple-500 hover:bg-purple-600 text-white font-bold"
             >
@@ -396,8 +442,10 @@ export function AdminPanel() {
                 <Download className="mr-1 w-4 h-4" /> Eksport CSV
               </Button>
               <Button
-                onClick={() => {
+                onClick={async () => {
                   clearExamResults()
+                  await apiClearResults(adminPin)
+                  setServerResults([])
                   setResultsVersion((v) => v + 1)
                 }}
                 disabled={!results.length}

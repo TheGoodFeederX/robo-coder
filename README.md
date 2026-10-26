@@ -76,6 +76,37 @@ tp 0,5
 - Sedikit tersasar sengaja: tiada sintaks penuh/penyerlahan baris dalam editor (hanya gutter),
   tiada komponen `Select` baharu untuk satu medan, token `.dark` sedia ada belum dipakai.
 
+## Backend (Neon Postgres)
+
+Ujian dan keputusan disimpan dalam Postgres (Neon, projek `robo-coder`, region `ap-southeast-1`). App terus berfungsi tanpa backend — setiap panggilan API gagal dengan tenang dan app kembali kepada salinan `localStorage`.
+
+| Laluan | Kaedah | Auth | Fungsi |
+| --- | --- | --- | --- |
+| `/api/exam` | GET | — | Baca ujian aktif |
+| `/api/exam` | PUT | `x-admin-pin` | Simpan ujian (divalidasi `validateExam`) |
+| `/api/results` | POST | — | Simpan keputusan pemain (markah dikira semula di pelayan) |
+| `/api/results` | GET | `x-admin-pin` | Senarai keputusan |
+| `/api/results` | DELETE | `x-admin-pin` | Padam semua keputusan |
+
+Persekitaran yang diperlukan:
+
+```bash
+DATABASE_URL=postgresql://...   # Neon pooled connection string
+ADMIN_PIN=1234                  # PIN guru, disemak di pelayan
+```
+
+Kedua-duanya perlu ada dalam `.env.local` (pembangunan) dan tetapan Environment Variables Vercel (production/preview/development). `.env.local` diabaikan oleh git.
+
+Migrasi skema:
+
+```bash
+pnpm db:migrate   # jalankan db/schema.sql
+```
+
+Jadual: `exams` (satu baris `id='default'`, tugasan dalam `jsonb`) dan `exam_results` (satu baris per penyerahan, indeks pada `created_at`).
+
+Nota keselamatan: PIN dihantar sebagai header dan disemak di pelayan, tetapi ia PIN kongsi mudah — bukan pengesahan pengguna sebenar.
+
 ## Pembangunan
 
 ```bash
@@ -97,6 +128,10 @@ components/      RobotCanvas, CodeEditor, LevelPanel, SummaryPage, UI (shadcn)
 lib/parser.ts   Parser arahan → Command[]
 lib/executor.ts Enjin gerakan beranimasi
 lib/levels.ts   Definisi level, halangan, semakan sasaran, penarafan bintang
+lib/db.ts       Klien Neon + pemetaan baris <-> domain
+lib/exam-repo.ts  Pertanyaan SQL untuk ujian dan keputusan
+lib/api-auth.ts   Semakan PIN guru di pelayan
+lib/api-client.ts Panggilan API dengan fallback setempat
 lib/modes.ts    Definisi tiga mod
 lib/exam.ts     Model ujian, tugasan, pemarkahan, parser halangan
 lib/sfx.ts      Kesan bunyi Web Audio (tanpa aset)

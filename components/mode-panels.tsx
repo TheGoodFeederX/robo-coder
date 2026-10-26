@@ -6,6 +6,7 @@ import { useRobot } from "@/lib/contexts/robot-context"
 import { ArrowRight, Check, RotateCcw, Send, VolumeX, Volume2 } from "lucide-react"
 import { useState } from "react"
 import type { ExamResult } from "@/lib/exam"
+import { apiAddResult } from "@/lib/api-client"
 
 export function FreePanel() {
   const { commands, soundOn, toggleSound, resetRobot } = useRobot()
@@ -43,6 +44,7 @@ export function FreePanel() {
 export function ExamPanel({ playerName }: { playerName: string }) {
   const { exam, examTaskIndex, examResults, won, nextExamTask, submitExam, attempts, soundOn, toggleSound } = useRobot()
   const [result, setResult] = useState<ExamResult | null>(null)
+  const [syncNote, setSyncNote] = useState("")
 
   const tasks = exam.tasks
   const task = tasks[examTaskIndex]
@@ -86,7 +88,9 @@ export function ExamPanel({ playerName }: { playerName: string }) {
             </li>
           ))}
         </ul>
-        <p className="text-white/50 text-xs">Keputusan disimpan. Guru boleh lihat di Panel Guru.</p>
+        <p className="text-white/70 text-xs">
+          Keputusan disimpan{syncNote ? ` (${syncNote})` : ""}. Guru boleh lihat di Panel Guru.
+        </p>
       </Card>
     )
   }
@@ -149,7 +153,13 @@ export function ExamPanel({ playerName }: { playerName: string }) {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => setResult(submitExam(playerName))}
+            onClick={async () => {
+              const local = submitExam(playerName)
+              setResult(local)
+              if (!local) return
+              const remote = await apiAddResult(playerName, exam, local.perTask)
+              setSyncNote(remote ? "diselaraskan ke pelayan" : "salinan setempat sahaja")
+            }}
             className="border-2 border-yellow-400 text-yellow-300 bg-transparent hover:bg-white/10"
           >
             <Send className="mr-1 w-4 h-4" /> Hantar ujian
